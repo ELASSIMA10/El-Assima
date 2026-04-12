@@ -47,6 +47,11 @@ jobs:
           # Verification
           cat android/app/src/main/AndroidManifest.xml
 
+      - name: Fix Min SDK Version
+        run: |
+          sed -i 's/flutter.minSdkVersion/23/g' android/app/build.gradle
+          sed -i 's/minSdkVersion 21/minSdkVersion 23/g' android/app/build.gradle
+
       - name: Flutter Pub Get
         run: flutter pub get
 
