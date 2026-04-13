@@ -117,11 +117,13 @@ jobs:
 
       - name: Match Package Name with Firebase
         run: |
-          # On force l'applicationId pour correspondre au JSON de Firebase
-          sed -i 's/applicationId ".*"/applicationId "com.supportclub.carte"/' android/app/build.gradle
-          # On vérifie aussi le namespace (pour les versions récentes de Gradle)
-          sed -i 's/namespace ".*"/namespace "com.supportclub.carte"/' android/app/build.gradle
-          echo "Application ID updated to match Firebase JSON"
+          # Correction radicale de l'ID d'application pour correspondre à Firebase
+          sed -i 's/applicationId .*/applicationId "com.supportclub.carte"/' android/app/build.gradle
+          sed -i 's/namespace .*/namespace "com.supportclub.carte"/' android/app/build.gradle
+          # Vérification console
+          echo "Verification des ID dans build.gradle :"
+          grep "applicationId" android/app/build.gradle
+          grep "namespace" android/app/build.gradle
 
       - name: Build APK Release
         run: |
