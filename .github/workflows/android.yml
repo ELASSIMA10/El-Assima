@@ -1,3 +1,4 @@
+# Trigger Build Final
 name: CarteNabil-Android-Build-APK-Final
 
 on:
@@ -5,6 +6,7 @@ on:
     branches:
       - main
       - master
+      - trigger-build-v3
   workflow_dispatch:
 
 jobs:
@@ -24,12 +26,67 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3'
+          flutter-version: '3.22.0'
           channel: 'stable'
 
       - name: Create Android Native Folders
         run: |
-          flutter create --org com.supportclub --project-name carte_nabil . --platforms=android --no-overwrite
+          flutter create --org com.supportclub.carte --project-name carte_nabil . --platforms=android --no-overwrite
+
+      - name: Configure Android Build (Ultimate Fix)
+        run: |
+          # 1. Force Root build.gradle for Kotlin 1.9.24
+          cat > android/build.gradle <<EOF
+          buildscript {
+              ext.kotlin_version = '1.9.24'
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.1'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
+                  classpath 'com.google.gms:google-services:4.4.1'
+              }
+          }
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.buildDir = '../build'
+          subprojects {
+              project.buildDir = "\${rootProject.buildDir}/\${project.name}"
+              project.evaluationDependsOn(':app')
+          }
+
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
+
+          # 2. Patch settings.gradle to align with Kotlin 1.9.24 and Google Services
+          # On remplace toute declaration de plugin kotlin et on ajoute google-services
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24" apply false/g' android/settings.gradle || true
+          if ! grep -q "com.google.gms.google-services" android/settings.gradle; then
+            sed -i '/plugins {/a \    id "com.google.gms.google-services" version "4.4.1" apply false' android/settings.gradle
+          fi
+
+          # 3. Patch app/build.gradle (Namespace, ApplicationId, SDKs)
+          sed -i -E 's/namespace[[:space:]]*=?[[:space:]]*".*"/namespace = "com.supportclub.carte"/g' android/app/build.gradle
+          sed -i -E 's/applicationId[[:space:]]*=?[[:space:]]*".*"/applicationId = "com.supportclub.carte"/g' android/app/build.gradle
+          sed -i -E 's/minSdk[A-Za-z]*[[:space:]]*=?[[:space:]]*.*/minSdk = 23/g' android/app/build.gradle
+          sed -i -E 's/targetSdk[A-Za-z]*[[:space:]]*=?[[:space:]]*.*/targetSdk = 34/g' android/app/build.gradle
+          
+          # 4. Finalizing plugins and manifest
+          if ! grep -q "com.google.gms.google-services" android/app/build.gradle; then
+            echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+          fi
+          sed -i '/android:minSdkVersion="[0-9]*"/d' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label=".*"/android:label="ASSIMA-10"/' android/app/src/main/AndroidManifest.xml
 
       - name: Inject Google Services JSON
         run: |
@@ -38,44 +95,6 @@ jobs:
           else
             echo "Warning: GOOGLE_SERVICES_JSON_BASE64 secret not found."
           fi
-
-      - name: Set Release Permissions & App Name
-        run: |
-          # Correction du Package Name
-          sed -i 's/package=".*"/package="com.supportclub.carte"/' android/app/src/main/AndroidManifest.xml
-          # Nettoyage des anciennes permissions pour éviter les doublons avant injection
-          sed -i '/<uses-permission/d' android/app/src/main/AndroidManifest.xml
-          # Injection propre des permissions
-          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />' android/app/src/main/AndroidManifest.xml
-          # Application label
-          sed -i 's/android:label=".*"/android:label="ASSIMA-10"/' android/app/src/main/AndroidManifest.xml
-
-      - name: Patch Android App Build Config
-        run: |
-          # 1. Forcer Namespace + ApplicationId (Regex tolerante aux espaces et =)
-          sed -i -E 's/namespace[[:space:]]*=?[[:space:]]*".*"/namespace = "com.supportclub.carte"/g' android/app/build.gradle
-          sed -i -E 's/applicationId[[:space:]]*=?[[:space:]]*".*"/applicationId = "com.supportclub.carte"/g' android/app/build.gradle
-
-          # 2. Forcer minSdk à 23
-          sed -i -E 's/minSdk[A-Za-z]*[[:space:]]*=?[[:space:]]*.*/minSdk = 23/g' android/app/build.gradle
-
-          # 3. Forcer targetSdk à 34
-          sed -i -E 's/targetSdk[A-Za-z]*[[:space:]]*=?[[:space:]]*.*/targetSdk = 34/g' android/app/build.gradle
-
-          # 4. Ajouter les plugins Google Services
-          if ! grep -q "com.google.gms:google-services" android/build.gradle 2>/dev/null; then
-            sed -i '/dependencies {/a \        classpath '\''com.google.gms:google-services:4.4.1'\''' android/build.gradle 2>/dev/null || true
-          fi
-          if ! grep -q "com.google.gms.google-services" android/app/build.gradle; then
-            echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
-          fi
-
-          # 5. Nettoyage agressif du Manifest
-          sed -i '/android:minSdkVersion="[0-9]*"/d' android/app/src/main/AndroidManifest.xml
-
-          # Vérification
-          echo "--- VERIFICATION BUILD.GRADLE ---"
-          grep -E "namespace|applicationId|minSdk|targetSdk" android/app/build.gradle
 
       - name: Build APK Release
         run: |
@@ -86,4 +105,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ASSIMA-10-Final-APK
-          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: build/app/outputs/flutter-apk/app-release-arm64-v8a-release.apk
