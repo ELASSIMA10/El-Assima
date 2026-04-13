@@ -13,10 +13,8 @@ git push -u origin master
 
 echo.
 echo ==========================================
-echo   Build lance sur GitHub Actions !
-echo   Rendez-vous sur GitHub pour telecharger:
-echo   - APK Android
-echo   - IPA iPhone (non-signe)
+echo   Code envoye ! Lancement de la surveillance...
 echo ==========================================
+python watch_build.py
 echo.
 pause

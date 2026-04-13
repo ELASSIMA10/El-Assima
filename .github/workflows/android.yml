@@ -1,4 +1,4 @@
-name: CarteNabil-Android-Build-APK
+name: CarteNabil-Android-Build-APK-Final
 
 on:
   push:
@@ -28,72 +28,81 @@ jobs:
           channel: 'stable'
 
       - name: Create Android Native Folders
-        run: flutter create --org com.supportclub.carte --project-name carte_nabil . --platforms=android --no-overwrite
-
-      - name: Fix Kotlin & R8 Versions
         run: |
-          # Overwrite root build.gradle with correct versions
+          # On s'assure que le projet est propre
+          flutter create --org com.supportclub.carte --project-name carte_nabil . --platforms=android --no-overwrite
+
+      - name: Configure Android Build (Gradle & Kotlin)
+        run: |
           cat > android/build.gradle <<EOF
-buildscript {
-    ext.kotlin_version = '1.9.24'
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
-        classpath 'com.android.tools:r8:8.3.37'
-    }
-}
+          buildscript {
+              ext.kotlin_version = '1.9.24'
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.1'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
+                  classpath 'com.android.tools:r8:8.3.37'
+              }
+          }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
 
-rootProject.buildDir = '../build'
-subprojects {
-    project.buildDir = "\${rootProject.buildDir}/\${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(':app')
-}
+          rootProject.buildDir = '../build'
+          subprojects {
+              project.buildDir = "\${rootProject.buildDir}/\${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(':app')
+          }
 
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
-}
-EOF
-          # Update Kotlin version in settings.gradle too
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
+          # Correction de la version Kotlin dans settings.gradle
           sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' android/settings.gradle || true
 
-      - name: Add Android Permissions
+      - name: Set Release Permissions & App Name
         run: |
-          # Update package name
+          # Correction du Package Name
           sed -i 's/package=".*"/package="com.supportclub.carte"/' android/app/src/main/AndroidManifest.xml
-          # Inject permissions for internet, camera, microphone, and storage
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <uses-permission android:name="android.permission.CAMERA" \/>\n    <uses-permission android:name="android.permission.RECORD_AUDIO" \/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" \/>\n    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" \/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" \/>\n    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" \/>' android/app/src/main/AndroidManifest.xml
-          # Allow cleartext traffic and set app label
+          
+          # Nettoyage des anciennes permissions pour éviter les doublons avant injection
+          sed -i '/<uses-permission/d' android/app/src/main/AndroidManifest.xml
+          
+          # Injection propre des permissions après le tag manifest
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />' android/app/src/main/AndroidManifest.xml
+          
+          # Configuration Application : Cleartext et Label Final
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           sed -i 's/android:label=".*"/android:label="ASSIMA-10"/' android/app/src/main/AndroidManifest.xml
-          # Verification
-          cat android/app/src/main/AndroidManifest.xml
 
-      - name: Fix Min SDK Version
+      - name: Finalize SDK Versions
         run: |
-          sed -i 's/flutter.minSdkVersion/23/g' android/app/build.gradle
-          sed -i 's/minSdkVersion 21/minSdkVersion 23/g' android/app/build.gradle
-
-      - name: Flutter Pub Get
-        run: flutter pub get
+          # On force le Min SDK à 23 pour la compatibilité NDI/Camera
+          sed -i 's/minSdkVersion .*/minSdkVersion 23/g' android/app/build.gradle
+          # On s'assure que le Target SDK est à 34 (Standard Google Play 2024+)
+          if grep -q "targetSdkVersion" android/app/build.gradle; then
+            sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
+          else
+            sed -i '/defaultConfig {/a \        targetSdkVersion 34' android/app/build.gradle
+          fi
 
       - name: Build APK Release
-        run: flutter build apk --release
+        run: |
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64 --split-per-abi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CarteNabil-Android-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: ASSIMA-10-Final-APK
+          path: build/app/outputs/flutter-apk/app-release-arm64-v8a-release.apk
