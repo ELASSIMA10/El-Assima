@@ -8,6 +8,7 @@ import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -143,13 +144,18 @@ class _ChatScreenState extends State<ChatScreen> {
   // --- AUDIO ---
   Future<void> _startRecording() async {
     try {
-      if (await Permission.microphone.request().isGranted) {
-        final Directory tempDir = await getTemporaryDirectory();
-        _recordingPath = '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      bool hasPermission = kIsWeb || await Permission.microphone.request().isGranted;
+      if (hasPermission) {
+        if (kIsWeb) {
+            _recordingPath = null;
+        } else {
+            final Directory tempDir = await getTemporaryDirectory();
+            _recordingPath = '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        }
         
         await _audioRecorder.start(
           const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 128000, sampleRate: 44100),
-          path: _recordingPath!,
+          path: _recordingPath ?? '',
         );
         setState(() => _isRecording = true);
       } else {

@@ -32,9 +32,9 @@ jobs:
 
       - name: Fix Kotlin & R8 Versions
         run: |
-          # Force nouveau R8 shrinker
-          sed -i '1i pluginManagement { buildscript { repositories { mavenCentral(); google() } dependencies { classpath("com.android.tools:r8:8.2.33") } } }' android/settings.gradle
-          # Force Kotlin 1.9.24
+          # The pluginManagement block is already created by 'flutter create'
+          # We should not prepend a new one. Instead, we can add the buildscript dependency inside if needed.
+          # For now, let's just fix the Kotlin version which is safer.
           sed -i 's/version "1.7.10" apply false/version "1.9.24" apply false/g' android/settings.gradle || true
           sed -i 's/version "1.8.22" apply false/version "1.9.24" apply false/g' android/settings.gradle || true
 
