@@ -25,7 +25,6 @@ dependencies:
 
   # Media dependencies
   image_picker: ^1.1.0
-  record: ^5.0.5
   audioplayers: ^5.2.1
   video_player: ^2.8.5
   permission_handler: ^11.3.1
@@ -36,9 +35,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-
-dependency_overrides:
-  record_platform_interface: 1.0.2
 
 flutter:
   uses-material-design: true

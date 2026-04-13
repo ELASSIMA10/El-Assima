@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:record/record.dart';
+// import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -30,15 +30,15 @@ class _ChatScreenState extends State<ChatScreen> {
   // Media
   final ImagePicker _picker = ImagePicker();
   
-  // Audio
-  late final AudioRecorder _audioRecorder;
+  // Audio (Temporarily disabled due to plugin incompatibility)
+  // late final AudioRecorder _audioRecorder;
   bool _isRecording = false;
   String? _recordingPath;
 
   @override
   void initState() {
     super.initState();
-    _audioRecorder = AudioRecorder();
+    // _audioRecorder = AudioRecorder();
     _loadPseudo();
   }
 
@@ -141,8 +141,9 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // --- AUDIO ---
+  // --- AUDIO (Disabled) ---
   Future<void> _startRecording() async {
+    /*
     try {
       bool hasPermission = kIsWeb || await Permission.microphone.request().isGranted;
       if (hasPermission) {
@@ -164,9 +165,11 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       print('Erreur record: $e');
     }
+    */
   }
 
   Future<void> _stopRecording() async {
+    /*
     try {
       final path = await _audioRecorder.stop();
       setState(() => _isRecording = false);
@@ -176,13 +179,14 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       print('Erreur stop record: $e');
     }
+    */
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _pseudoController.dispose();
-    _audioRecorder.dispose();
+    // _audioRecorder.dispose();
     super.dispose();
   }
 
