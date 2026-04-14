@@ -95,10 +95,23 @@ class _ScannerScreenState extends State<ScannerScreen> {
       // Usually membership cards have a unique ID or a specific format.
       // We search in the 'members' collection.
       
-      final querySnapshot = await FirebaseFirestore.instance
+      // Search by cardId
+      var querySnapshot = await FirebaseFirestore.instance
           .collection('members')
           .where('cardId', isEqualTo: rawData)
           .get();
+
+      // If not found by ID, try searching by name within the text
+      if (querySnapshot.docs.isEmpty) {
+        final allMembers = await FirebaseFirestore.instance.collection('members').get();
+        for (var doc in allMembers.docs) {
+          final name = (doc.data()['name'] ?? '').toString().toLowerCase();
+          if (rawData.toLowerCase().contains(name) || name.contains(rawData.toLowerCase())) {
+            querySnapshot = await FirebaseFirestore.instance.collection('members').where(FieldPath.documentId, isEqualTo: doc.id).get();
+            break;
+          }
+        }
+      }
 
       if (querySnapshot.docs.isNotEmpty) {
         final doc = querySnapshot.docs.first;

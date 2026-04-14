@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'chat_screen.dart';
 import 'scanner_screen.dart';
-import 'stadium_screen.dart';
+import 'members_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,9 +79,8 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const ChatScreen(),
-    const StadiumScreen(),
     const ScannerScreen(),
+    const MembersListScreen(),
   ];
 
   @override
@@ -115,19 +113,14 @@ class _MainScreenState extends State<MainScreen> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Discussion',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.stadium_outlined),
-            selectedIcon: Icon(Icons.stadium),
-            label: 'Stade',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.qr_code_scanner),
             selectedIcon: Icon(Icons.camera_alt),
             label: 'Scanner',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'ZONE 14',
           ),
         ],
       ),
