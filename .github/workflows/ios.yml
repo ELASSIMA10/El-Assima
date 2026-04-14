@@ -66,15 +66,19 @@ jobs:
           PODFILE
           )'
 
-      - name: Pod Install + Scorched Earth Flag Scrub
+      - name: Pod Install
         run: |
           cd ios
           pod install
-          echo "🔥 Scrubbing -G flag from all config files..."
-          find . -type f \( -name "*.xcconfig" -o -name "*.pbxproj" \) -exec sed -i '' 's/-G//g' {} + || true
-          # Verification
-          grep -R "\-G" . || echo "✅ NO -G FOUND"
           cd ..
+
+      - name: Clean Xcode flags
+        run: |
+          echo "🔥 Scrubbing -G flag from Xcode project and configs..."
+          sed -i '' 's/-G//g' ios/Runner.xcodeproj/project.pbxproj || true
+          find ios -name "*.xcconfig" -type f -exec sed -i '' 's/-G//g' {} + || true
+          # Verification
+          grep -R "\-G" ios || echo "✅ NO -G FOUND"
 
       - name: Build iOS (No Codesign)
         run: |
