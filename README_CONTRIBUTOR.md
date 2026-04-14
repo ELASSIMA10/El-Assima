@@ -27,16 +27,19 @@ This project is a high-performance membership scanner for stadium entry manageme
 - `pubspec.yaml`: Dependencies (Note: `intl: ^0.20.2` is required for compatibility).
 - `google-services.json` (Android) & `GoogleService-Info.plist` (iOS): Firebase config files.
 
-## 🚀 How to Continue the Work
-1. **GitHub Collaboration**: The user has sent you an invitation to the repository. Accept it to pull/push.
-2. **Adding Members**: Update `DataManager.seedInitialMembers()` or import directly to Firestore.
-3. **Triggering Builds**: Simply push to `master` or `main`.
-4. **iOS Build Note**: The `ios.yml` workflow automatically regenerates the iOS folder and fixes permissions/deployment targets using Ruby. Do not manually edit the `ios/` folder unless necessary; use the workflow for consistency.
+## 🤖 Guide pour l'Agent de Codage (AI Assistant)
+Si vous êtes l'IA assistant du collaborateur, voici les instructions pour prendre le relais efficacement :
+
+- 📍 **Clonage & Sync** : Clonez le repo et faites toujours un `git pull` avant de commencer. Les identifiants de collaboration ont été validés.
+- 🛠️ **Scripts d'Automatisation** : Utilisez `launch_build.bat` pour synchroniser le code et déclencher les builds CI/CD (iOS/Android/Web).
+- 🧬 **Pipeline iOS** : Le fichier `.github/workflows/ios.yml` génère un `Podfile` maître. Il corrige automatiquement le flag `-G` et force l'iOS 13.0. Évitez de modifier manuellement le dossier `ios/` localement, passez par le workflow.
+- 🧹 **Nettoyage des Données** : Le `DataManager` vide la collection de membres avant de re-seeder pour éviter les doublons.
+- 📥 **Export History** : La fonction d'exportation vers Excel (CSV) est disponible dans l'onglet Historique.
 
 ## 📌 Next Steps
-- Integrate the full member lists for the 14 zones.
-- Test the OCR accuracy under stadium lighting conditions.
-- Finalize App Store/Play Store distribution if required.
+- Intégrer la liste complète des membres des 14 zones.
+- Valider la précision de l'OCR en conditions réelles de stade.
+- Finaliser la signature Xcode pour une distribution sur l'App Store.
 
 ---
 **Maintained by Antigravity AI Agent**
