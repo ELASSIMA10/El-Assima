@@ -25,15 +25,11 @@ jobs:
           flutter pub get
           # Ensure camera permissions are added to Info.plist
           if [ -f ios/Runner/Info.plist ]; then
-            sed -i '' '/<dict>/a \
-            <key>NSCameraUsageDescription</key>\n<string>Scan de cartes de membres</string>\n<key>NSMicrophoneUsageDescription</key>\n<string>Utilisation du micro pour le scanner</string>' ios/Runner/Info.plist
+            ruby -i -pe 'gsub(/<dict>/, "<dict>\n<key>NSCameraUsageDescription</key>\n<string>Scan de cartes de membres</string>\n<key>NSMicrophoneUsageDescription</key>\n<string>Utilisation du micro pour le scanner</string>")' ios/Runner/Info.plist
           fi
           # Force iOS 13.0 in Podfile
           if [ -f ios/Podfile ]; then
-            sed -i "s/# platform :ios, '11.0'/platform :ios, '13.0'/g" ios/Podfile
-            sed -i "s/platform :ios, '11.0'/platform :ios, '13.0'/g" ios/Podfile
-            sed -i "s/platform :ios, '12.0'/platform :ios, '13.0'/g" ios/Podfile
-            sed -i "s/platform :ios, '10.0'/platform :ios, '13.0'/g" ios/Podfile
+            ruby -i -pe 'gsub(/platform :ios, .*/, "platform :ios, \"13.0\"")' ios/Podfile
           fi
 
       - name: Build iOS (No Codesign)
