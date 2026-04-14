@@ -30,7 +30,7 @@ jobs:
           if [ -f ios/Runner/Info.plist ]; then
             ruby -i -pe 'gsub(/<dict>/, "<dict>\n<key>NSCameraUsageDescription</key>\n<string>Scan de cartes de membres</string>\n<key>NSMicrophoneUsageDescription</key>\n<string>Utilisation du micro pour le scanner</string>")' ios/Runner/Info.plist
           fi
-          # Force iOS 13.0 and Clean Flags by overwriting Podfile entirely (ULTRA-AGGRESSIVE)
+          # Force iOS 13.0 via Podfile (SCORCHED EARTH)
           mkdir -p ios
           ruby -e 'File.write("ios/Podfile", <<~"PODFILE"
             platform :ios, "13.0"
@@ -59,14 +59,6 @@ jobs:
               installer.pods_project.targets.each do |target|
                 flutter_additional_ios_build_settings(target)
                 target.build_configurations.each do |config|
-                  %w[OTHER_CFLAGS OTHER_CPLUSPLUSFLAGS OTHER_LDFLAGS].each do |flag|
-                    value = config.build_settings[flag]
-                    if value.is_a?(Array)
-                      config.build_settings[flag] = value.reject { |f| f.include?("-G") }
-                    elsif value.is_a?(String)
-                      config.build_settings[flag] = value.gsub("-G", "")
-                    end
-                  end
                   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "13.0"
                 end
               end
@@ -74,13 +66,14 @@ jobs:
           PODFILE
           )'
 
-      - name: Install Pods + Patch -G
+      - name: Pod Install + Scorched Earth Flag Scrub
         run: |
           cd ios
           pod install
-          # 🔥 SUPPRESSION GLOBALE DU FLAG -G (après génération)
-          find Pods -name "*.xcconfig" -type f -exec sed -i '' 's/-G//g' {} + || true
-          sed -i '' 's/-G//g' Pods/**/*.xcconfig || true
+          echo "🔥 Scrubbing -G flag from all config files..."
+          find . -type f \( -name "*.xcconfig" -o -name "*.pbxproj" \) -exec sed -i '' 's/-G//g' {} + || true
+          # Verification
+          grep -R "\-G" . || echo "✅ NO -G FOUND"
           cd ..
 
       - name: Build iOS (No Codesign)
