@@ -9,7 +9,7 @@ class MembersListScreen extends StatefulWidget {
 }
 
 class _MembersListScreenState extends State<MembersListScreen> {
-  int _selectedZone = 14; // Default to Zone 14 as previously requested
+  int _selectedZone = 1; // Default to Zone 1
 
 
   @override
@@ -107,6 +107,9 @@ class _MembersListScreenState extends State<MembersListScreen> {
               }
 
               final members = snapshot.data!.docs;
+              final totalMembers = members.length;
+              final presentCount = members.where((doc) => (doc.data() as Map<String, dynamic>)['is_present'] == true).length;
+              final absentCount = totalMembers - presentCount;
 
               if (members.isEmpty) {
                 return const Center(
@@ -117,44 +120,101 @@ class _MembersListScreenState extends State<MembersListScreen> {
                 );
               }
 
-              return ListView.builder(
-                itemCount: members.length,
-                itemBuilder: (context, index) {
-                  final member = members[index].data() as Map<String, dynamic>;
-                  final String name = member['name'] ?? 'Inconnu';
-                  final String cardId = member['cardId'] ?? 'Pas d\'ID';
-                  final bool isPresent = member['is_present'] ?? false;
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isPresent ? Colors.green : Colors.red,
-                        child: Icon(
-                          isPresent ? Icons.check : Icons.close,
-                          color: Colors.white,
-                        ),
-                      ),
-                      title: Text(
-                        name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      subtitle: Text("ID: $cardId"),
-                      trailing: Text(
-                        isPresent ? "PRÉSENT" : "ABSENT",
-                        style: TextStyle(
-                          color: isPresent ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              return Column(
+                children: [
+                  // Stats Dashboard
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.black12),
                     ),
-                  );
-                },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatItem("MEMBRES", totalMembers.toString(), Colors.blue),
+                        _buildStatItem("ENTRÉS", presentCount.toString(), Colors.green),
+                        _buildStatItem("RESTANT", absentCount.toString(), Colors.redAccent),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: members.length,
+                      itemBuilder: (context, index) {
+                        final member = members[index].data() as Map<String, dynamic>;
+                        final String name = member['name'] ?? 'Inconnu';
+                        final String cardId = member['cardId'] ?? 'Pas d\'ID';
+                        final bool isPresent = member['is_present'] ?? false;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          elevation: isPresent ? 4 : 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: isPresent ? Colors.green.withOpacity(0.5) : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: isPresent ? Colors.green : Colors.grey[300],
+                              child: Icon(
+                                isPresent ? Icons.check : Icons.person_outline,
+                                color: isPresent ? Colors.white : Colors.black38,
+                              ),
+                            ),
+                            title: Text(
+                              name,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: isPresent ? Colors.black : Colors.black54,
+                              ),
+                            ),
+                            subtitle: Text("ID: $cardId"),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isPresent ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                isPresent ? "PRÉSENT" : "ABSENT",
+                                style: TextStyle(
+                                  color: isPresent ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               );
             },
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: color),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54),
         ),
       ],
     );

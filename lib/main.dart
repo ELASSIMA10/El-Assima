@@ -126,7 +126,7 @@ class _MainScreenState extends State<MainScreen> {
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
-            label: 'ZONE 14',
+            label: 'ZONES',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_outlined),

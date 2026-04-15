@@ -104,9 +104,19 @@ class _ScannerScreenState extends State<ScannerScreen> {
       
       String extracted = recognizedText.text;
       
-      // Real checking logic
       if (extracted.trim().isNotEmpty) {
-        await _verifyMember(extracted.trim());
+        // Find potential card IDs in the text (Word with letters and numbers)
+        final words = extracted.split(RegExp(r'\s+'));
+        String? likelyId;
+        for (var word in words) {
+          final cleanWord = word.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+          if (cleanWord.length >= 4 && cleanWord.contains(RegExp(r'[0-9]'))) {
+            likelyId = cleanWord;
+            break;
+          }
+        }
+
+        await _verifyMember(likelyId ?? extracted.trim());
       } else {
         setState(() {
           _scanResult = "❌ Aucun texte détecté. Rapprochez la carte.";
@@ -127,16 +137,49 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
+  Future<void> _showManualSearchDialog() async {
+    final TextEditingController searchController = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Recherche Manuelle"),
+        content: TextField(
+          controller: searchController,
+          decoration: const InputDecoration(
+            labelText: "Entrez le Matricule / ID",
+            hintText: "Ex: AC010",
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("ANNULER")),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, searchController.text.trim()),
+            child: const Text("RECHERCHER"),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      _verifyMember(result);
+    }
+  }
+
   Future<void> _verifyMember(String rawData) async {
     try {
-      // Normalize rawData for searching (e.g. searching by ID or Name)
-      // Usually membership cards have a unique ID or a specific format.
-      // We search in the 'members' collection.
+      // Normalize rawData for searching
+      final String searchId = rawData.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
       
+      setState(() {
+        _scanResult = "Vérification de : $searchId";
+      });
+
       // Search by cardId
       var querySnapshot = await FirebaseFirestore.instance
           .collection('members')
-          .where('cardId', isEqualTo: rawData)
+          .where('cardId', isEqualTo: searchId)
           .get();
 
       // If not found by ID, try fuzzy searching by name
@@ -149,11 +192,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
           final nameParts = fullName.split(' ').where((s) => s.length > 2).toList();
           
           bool match = false;
-          // Check if the whole name is in the text
           if (normalizedRaw.contains(fullName)) {
             match = true;
           } else {
-            // Check if all significant parts of the name are present in any order
             int foundParts = 0;
             for (var part in nameParts) {
               if (normalizedRaw.contains(part)) foundParts++;
@@ -175,14 +216,27 @@ class _ScannerScreenState extends State<ScannerScreen> {
         final data = doc.data();
         final String name = data['name'] ?? 'Supporter';
         final dynamic zone = data['zone'] ?? '?';
+        final bool isAlreadyPresent = data['is_present'] ?? false;
         
-        // Update presence
+        if (isAlreadyPresent) {
+          if (mounted) {
+            HapticFeedback.vibrate();
+            setState(() {
+              _showErrorOverlay = true;
+              _scanResult = "⚠️ DÉJÀ ENTRÉ !\n\nNOM : $name\nZONE : $zone\nCette carte a déjà été scannée.";
+            });
+            Future.delayed(const Duration(seconds: 3), () {
+              if (mounted) setState(() => _showErrorOverlay = false);
+            });
+          }
+          return;
+        }
+
         await doc.reference.update({
           'is_present': true,
           'last_scanned': FieldValue.serverTimestamp(),
         });
 
-        // Add to history
         await FirebaseFirestore.instance.collection('scans_history').add({
           'name': name,
           'cardId': data['cardId'] ?? '?',
@@ -190,16 +244,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-
         if (mounted) {
-          HapticFeedback.heavyImpact(); // "Sonne vert" via vibration
+          HapticFeedback.vibrate();
           setState(() {
             _showSuccessOverlay = true;
             _scanResult = "✓ Membre reconnu :\n\nNOM : $name\nZONE : $zone\nBIENVENU AU STADE !";
           });
           
-          // Hide overlay after 1 second
-          Future.delayed(const Duration(seconds: 1), () {
+          Future.delayed(const Duration(seconds: 2), () {
             if (mounted) setState(() => _showSuccessOverlay = false);
           });
         }
@@ -207,10 +259,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
         if (mounted) {
           setState(() {
             _showErrorOverlay = true;
-            _scanResult = "❌ Membre non trouvé dans la base.\nScan: $rawData";
+            _scanResult = "❌ Membre non trouvé.\nID: $searchId";
           });
           
-          Future.delayed(const Duration(seconds: 1), () {
+          Future.delayed(const Duration(seconds: 2), () {
             if (mounted) setState(() => _showErrorOverlay = false);
           });
         }
@@ -260,10 +312,21 @@ class _ScannerScreenState extends State<ScannerScreen> {
             child: Stack(
               children: [
                 Positioned.fill(child: CameraPreview(_cameraController!)),
+                // Decorative Frame
+                Center(
+                  child: Container(
+                    width: 250,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
                 if (_showSuccessOverlay)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.green.withOpacity(0.4),
+                      color: Colors.green.withOpacity(0.6),
                       child: const Center(
                         child: Icon(Icons.check_circle, color: Colors.white, size: 100),
                       ),
@@ -272,24 +335,37 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 if (_showErrorOverlay)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.red.withOpacity(0.4),
+                      color: Colors.red.withOpacity(0.6),
                       child: const Center(
                         child: Icon(Icons.cancel, color: Colors.white, size: 100),
                       ),
                     ),
                   ),
-                if (_cameras.length > 1)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black54,
-                      child: IconButton(
-                        icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
-                        onPressed: _toggleCamera,
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Column(
+                    children: [
+                      if (_cameras.length > 1)
+                        CircleAvatar(
+                          backgroundColor: Colors.black54,
+                          child: IconButton(
+                            icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+                            onPressed: _toggleCamera,
+                          ),
+                        ),
+                      const SizedBox(height: 10),
+                      CircleAvatar(
+                        backgroundColor: Colors.black54,
+                        child: IconButton(
+                          icon: const Icon(Icons.search, color: Colors.white),
+                          onPressed: _showManualSearchDialog,
+                          tooltip: "Recherche manuelle",
+                        ),
                       ),
-                    ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),

@@ -4,7 +4,7 @@ class DataManager {
   static Future<void> seedInitialMembers() async {
     final collection = FirebaseFirestore.instance.collection('members');
     
-    // 1. Full clean up of the members collection to avoid any duplicates
+    // 1. Full clean up of the members collection to avoid duplicates
     final snapshot = await collection.get();
     final cleanupBatch = FirebaseFirestore.instance.batch();
     for (var doc in snapshot.docs) {
@@ -12,25 +12,82 @@ class DataManager {
     }
     await cleanupBatch.commit();
 
-    // 2. Seed Souheib
-    await collection.doc('ac001').set({
-      'name': 'Laroui Souheib',
-      'cardId': 'ac001',
-      'is_present': false,
-      'matricule': 'ac001',
-      'zone': 14,
-    }, SetOptions(merge: true));
+    // 2. Sample data across different zones
+    final List<Map<String, dynamic>> initialData = [
+      {
+        'cardId': 'AB005',
+        'name': 'Lafri Ilyes',
+        'is_present': false,
+        'matricule': 'AB005',
+        'zone': 5,
+      },
+      {
+        'cardId': 'AN001',
+        'name': 'Sidou Charefi',
+        'is_present': false,
+        'matricule': 'AN001',
+        'zone': 1,
+      },
+      {
+        'cardId': 'AC001',
+        'name': 'Laroui Souheib',
+        'is_present': false,
+        'matricule': 'AC001',
+        'zone': 14,
+      },
+      {
+        'cardId': 'AC010',
+        'name': 'Lafri Nabil Riad',
+        'is_present': false,
+        'matricule': 'AC010',
+        'zone': 14,
+      },
+      {
+        'cardId': 'AC002',
+        'name': 'Brahimi Mohamed',
+        'is_present': false,
+        'matricule': 'AC002',
+        'zone': 1,
+      },
+      {
+        'cardId': 'AC003',
+        'name': 'Ziani Mourad',
+        'is_present': false,
+        'matricule': 'AC003',
+        'zone': 5,
+      },
+      {
+        'cardId': 'AC004',
+        'name': 'Belmadi Djamel',
+        'is_present': false,
+        'matricule': 'AC004',
+        'zone': 7,
+      },
+      {
+        'cardId': 'AC105',
+        'name': 'Mahrez Riyad',
+        'is_present': false,
+        'matricule': 'AC105',
+        'zone': 14,
+      },
+      {
+        'cardId': 'AC106',
+        'name': 'Slimani Islam',
+        'is_present': false,
+        'matricule': 'AC106',
+        'zone': 14,
+      },
+    ];
 
-    // 3. Seed Nabil (Updated from Card Photo)
-    // We use AC010 to match the ID on the card exactly
-    await collection.doc('AC010').set({
-      'name': 'Lafri Nabil Riad',
-      'cardId': 'AC010',
-      'is_present': false,
-      'matricule': 'AC010',
-      'zone': 14,
-    }, SetOptions(merge: true));
+    final batch = FirebaseFirestore.instance.batch();
+    for (var member in initialData) {
+      batch.set(collection.doc(member['cardId']), {
+        ...member,
+        'last_scanned': null,
+      });
+    }
     
-    print("Database cleaned and initial members seeded (Souheib & Nabil only).");
+    await batch.commit();
+    print("Base de données initialisée avec ${initialData.length} membres de test.");
   }
 }
