@@ -178,7 +178,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
 
     if (result != null && result.isNotEmpty) {
-      _verifyMember(result);
+      _verifyMember([result]);
     }
   }
 
