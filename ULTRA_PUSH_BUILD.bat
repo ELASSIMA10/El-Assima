@@ -1,29 +1,26 @@
 @echo off
 setlocal
-echo 🚀 [ ULTRA PUSH & BUILD : ZONE 14 ] 🚀
+echo "🚀 [ FULL STABLE PUSH & BUILD : iOS + ANDROID + WEB ] 🚀"
 
 :: Nettoyage des index Git
 echo [*] Nettoyage Git...
 git gc --prune=now --quiet
 
-:: Ajout de TOUS les fichiers (y compris les .github et fix_ios.bat)
+:: Ajout de TOUS les fichiers
 echo [*] Preparation des fichiers...
 git add .
 
 :: Commit force (avec date/heure pour garantir une modification)
 set MYDATE=%date% %time%
 echo [*] Creation du commit de declenchement...
-git commit -m "🚀 Force Build Trigger - %MYDATE%" || echo [INFO] Rien a committer, on force le push quand meme.
+git commit -m "🚀 Full Stable Build Trigger - %MYDATE%" || echo [INFO] Rien a committer.
 
-:: Push force vers les deux branches possibles
+:: Push vers MASTER uniquement pour la stabilite
 echo [*] Envoi vers GitHub (master)...
-git push origin master:master --force
-
-echo [*] Envoi vers GitHub (main)...
-git push origin master:main --force
+git push origin master --force
 
 echo.
-echo ✅ [ SUCCES ] Le build devrait maintenant demarrer !
+echo ✅ [ SUCCES ] Tous les builds (iOS, Android, Web) sont en route !
 echo Suivez la progression ici :
 echo https://github.com/djenadimohamedamine-code/carte-nabil/actions
 echo.

@@ -8,15 +8,17 @@ import 'data_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Seed members at startup
-  await DataManager.seedInitialMembers();
-  
-  runApp(const ClubApp());
+  try {
+    // Initialisation Firebase avec options
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Lancement du seeding en arrière-plan (non bloquant)
+    DataManager.seedInitialMembers().catchError((e) => print(e));
+  } catch (e) {
+    print("Erreur Firebase: $e");
+  }
+  runApp(const ClubApp()); // Votre application continue de tourner même si Firebase a un souci
 }
 
 class ClubApp extends StatelessWidget {
