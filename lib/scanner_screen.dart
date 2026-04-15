@@ -106,21 +106,32 @@ class _ScannerScreenState extends State<ScannerScreen> {
       String extracted = recognizedText.text;
       
       if (extracted.trim().isNotEmpty) {
-        // Find potential card IDs in the text (Word with letters and numbers)
-        final words = extracted.split(RegExp(r'[\s\n]+'));
-        String? likelyId;
+        // Collect all potential card candidates from the text
+        final allText = extracted.toUpperCase();
+        final words = allText.split(RegExp(r'[\s\n\-\.\,]+'));
         
-        // Strategy 1: Look for alphanumeric strings of length 3-8
+        List<String> candidates = [];
+        
+        // Strategy 1: Look for exact Matricule pattern (e.g. AC010)
+        final matriculeRegex = RegExp(r'[A-Z]{2}[0-9]{2,4}');
+        final matches = matriculeRegex.allMatches(allText);
+        for (var match in matches) {
+          candidates.add(match.group(0)!);
+        }
+
+        // Strategy 2: Collect other alphanumeric strings of length 3-10
         for (var word in words) {
-          final cleanWord = word.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
-          if (cleanWord.length >= 3 && cleanWord.length <= 8 && cleanWord.contains(RegExp(r'[0-9]'))) {
-            likelyId = cleanWord;
-            break;
+          final clean = word.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+          if (clean.length >= 3 && clean.length <= 10 && !candidates.contains(clean)) {
+            candidates.add(clean);
           }
         }
 
-        // Strategy 2: If no ID found, try searching the whole text for matches in the database
-        await _verifyMember(likelyId ?? extracted.trim(), fullText: extracted);
+        if (candidates.isNotEmpty) {
+          await _verifyMember(candidates, fullText: extracted);
+        } else {
+          await _verifyMember([extracted.trim()], fullText: extracted);
+        }
       } else {
         setState(() {
           _scanResult = "❌ Aucun texte détecté. Rapprochez la carte.";
@@ -150,8 +161,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
         content: TextField(
           controller: searchController,
           decoration: const InputDecoration(
-            labelText: "Entrez le Matricule / ID",
-            hintText: "Ex: AC010",
+            labelText: "Matricule (Ex: AC010)",
+            hintText: "Ex de matricule : AC010",
             border: OutlineInputBorder(),
           ),
           textCapitalization: TextCapitalization.characters,
@@ -171,55 +182,79 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
-  Future<void> _verifyMember(String rawData, {String? fullText}) async {
+  Future<void> _verifyMember(List<String> candidates, {String? fullText}) async {
     try {
-      // Normalize rawData for searching
-      final String searchId = rawData.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+      String? foundName;
+      String? foundZone;
+      String? foundMatricule;
+      DocumentSnapshot? foundDoc;
       
       setState(() {
-        _scanResult = "Vérification de : $searchId";
+        _scanResult = "Vérification en cours...";
       });
 
-      // Search by cardId
-      var querySnapshot = await FirebaseFirestore.instance
-          .collection('members')
-          .where('cardId', isEqualTo: searchId)
-          .get();
+      // 1. Try exact matches for all candidates
+      for (var rawId in candidates) {
+        final searchId = rawId.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+        if (searchId.isEmpty) continue;
 
-      // If not found by ID, try fuzzy searching by name
-      if (querySnapshot.docs.isEmpty) {
+        var querySnapshot = await FirebaseFirestore.instance
+            .collection('members')
+            .where('cardId', isEqualTo: searchId)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          foundDoc = querySnapshot.docs.first;
+          break;
+        }
+        
+        // Also try searching by 'matricule' field specifically
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('members')
+            .where('matricule', isEqualTo: searchId)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          foundDoc = querySnapshot.docs.first;
+          break;
+        }
+      }
+
+      // 2. Fallback: Fuzzy searching by name in the full text
+      if (foundDoc == null && fullText != null) {
+        final normalizedFull = fullText.toLowerCase();
         final allMembers = await FirebaseFirestore.instance.collection('members').get();
-        final normalizedRaw = rawData.toLowerCase();
-
+        
         for (var doc in allMembers.docs) {
           final fullName = (doc.data()['name'] ?? '').toString().toLowerCase();
-          final nameParts = fullName.split(' ').where((s) => s.length > 2).toList();
+          if (fullName.length < 4) continue;
           
-          bool match = false;
-          if (normalizedRaw.contains(fullName)) {
-            match = true;
-          } else {
-            int foundParts = 0;
-            for (var part in nameParts) {
-              if (normalizedRaw.contains(part)) foundParts++;
-            }
-            if (nameParts.isNotEmpty && foundParts >= nameParts.length) {
-              match = true;
-            }
-          }
-
-          if (match) {
-            querySnapshot = await FirebaseFirestore.instance.collection('members').where(FieldPath.documentId, isEqualTo: doc.id).get();
+          if (normalizedFull.contains(fullName)) {
+            foundDoc = doc;
             break;
+          }
+          
+          // Partial name matching
+          final nameParts = fullName.split(' ').where((s) => s.length > 3).toList();
+          if (nameParts.isNotEmpty) {
+            int matches = 0;
+            for (var part in nameParts) {
+              if (normalizedFull.contains(part)) matches++;
+            }
+            if (matches >= nameParts.length) {
+              foundDoc = doc;
+              break;
+            }
           }
         }
       }
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final doc = querySnapshot.docs.first;
-        final data = doc.data();
-        final String name = data['name'] ?? 'Supporter';
-        final dynamic zone = data['zone'] ?? '?';
+      if (foundDoc != null) {
+        final data = foundDoc.data() as Map<String, dynamic>;
+        foundName = data['name'] ?? 'Supporter';
+        foundZone = (data['zone'] ?? '?').toString();
+        foundMatricule = data['matricule'] ?? data['cardId'] ?? '?';
+        
         final bool isAlreadyPresent = data['is_present'] ?? false;
         
         if (isAlreadyPresent) {
@@ -227,24 +262,24 @@ class _ScannerScreenState extends State<ScannerScreen> {
             HapticFeedback.vibrate();
             setState(() {
               _showErrorOverlay = true;
-              _scanResult = "⚠️ DÉJÀ ENTRÉ !\n\nNOM : $name\nZONE : $zone\nCette carte a déjà été scannée.";
+              _scanResult = "⚠️ DÉJÀ ENTRÉ !\n\nNOM : $foundName\nMATRICULE : $foundMatricule\nZONE : $foundZone";
             });
-            Future.delayed(const Duration(seconds: 3), () {
+            Future.delayed(const Duration(seconds: 4), () {
               if (mounted) setState(() => _showErrorOverlay = false);
             });
           }
           return;
         }
 
-        await doc.reference.update({
+        await foundDoc.reference.update({
           'is_present': true,
           'last_scanned': FieldValue.serverTimestamp(),
         });
 
         await FirebaseFirestore.instance.collection('scans_history').add({
-          'name': name,
-          'cardId': data['cardId'] ?? '?',
-          'zone': zone,
+          'name': foundName,
+          'cardId': foundMatricule,
+          'zone': foundZone,
           'timestamp': FieldValue.serverTimestamp(),
         });
 
@@ -252,10 +287,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
           HapticFeedback.vibrate();
           setState(() {
             _showSuccessOverlay = true;
-            _scanResult = "✓ Membre reconnu :\n\nNOM : $name\nZONE : $zone\nBIENVENU AU STADE !";
+            _scanResult = "✅ ACCÈS AUTORISÉ\n\n$foundName\nZONE : $foundZone\nMATRICULE : $foundMatricule";
           });
           
-          Future.delayed(const Duration(seconds: 2), () {
+          Future.delayed(const Duration(seconds: 3), () {
             if (mounted) setState(() => _showSuccessOverlay = false);
           });
         }
@@ -263,10 +298,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
         if (mounted) {
           setState(() {
             _showErrorOverlay = true;
-            _scanResult = "❌ Membre non trouvé.\nID extrait : $searchId\n\n${fullText != null ? "Texte détecté : ${fullText.length > 50 ? fullText.substring(0, 50) + "..." : fullText}" : ""}";
+            final bestAttempt = candidates.isNotEmpty ? candidates.first : "?";
+            _scanResult = "❌ AUCUN MEMBRE TROUVÉ\n\nMatricule détecté : $bestAttempt\n\nVérifiez la carte ou essayez la recherche manuelle.";
           });
           
-          Future.delayed(const Duration(seconds: 2), () {
+          Future.delayed(const Duration(seconds: 4), () {
             if (mounted) setState(() => _showErrorOverlay = false);
           });
         }
@@ -274,7 +310,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     } catch (e) {
        if (mounted) {
         setState(() {
-          _scanResult = "Erreur base de données : $e";
+          _scanResult = "Erreur système : $e";
         });
       }
     }
@@ -392,11 +428,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       _scanResult,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: _scanResult.contains("✅") ? 22 : 16,
+                        letterSpacing: 0.5,
+                        height: 1.4,
                         fontWeight: FontWeight.bold,
-                        color: _scanResult.contains("✓") 
-                            ? Colors.green 
-                            : (_scanResult.contains("❌") ? Colors.red : Theme.of(context).colorScheme.onSurface),
+                        color: _scanResult.contains("✅") 
+                            ? Colors.green.shade700 
+                            : (_scanResult.contains("❌") || _scanResult.contains("⚠️") ? Colors.red : Theme.of(context).colorScheme.onSurface),
                       ),
                     ),
                   ),
