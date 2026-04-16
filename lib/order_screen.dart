@@ -120,7 +120,7 @@ class _OrderScreenState extends State<OrderScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () => setState(() => _selectedProduct = 'Porte-clé'),
-                  child: _buildProductCard('Porte-clé', '500 DA', 'porte_cle.png', _selectedProduct == 'Porte-clé'),
+                  child: _buildProductCard('Porte-clé', '500 DA', 'porte-clé.jpeg', _selectedProduct == 'Porte-clé'),
                 ),
               ),
             ],
