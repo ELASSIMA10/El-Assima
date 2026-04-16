@@ -34,10 +34,8 @@ jobs:
           # Use local files but ensure R8 tool is available in buildscript if needed for the engine
           # However, the user said B) rebuild complete (recommende). Let's do B partly by forcing structures.
           
-          # Inject Google Services JSON from secret if available (Commented out to use the repo file)
-          # if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
-          #   echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > android/app/google-services.json
-          # fi
+          # Using google-services.json from repository
+
 
       - name: Build APK Release
         run: |
