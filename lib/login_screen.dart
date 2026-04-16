@@ -13,7 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String _error = "";
 
   void _checkPin() {
-    if (_pinController.text == "1010") {
+    if (_pinController.text == "0101") {
       widget.onLoginSuccess();
     } else {
       setState(() {

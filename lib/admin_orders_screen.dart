@@ -33,7 +33,7 @@ class AdminOrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // 3 tabs now
+      length: 4, // 4 tabs now
       child: Column(
         children: [
           Container(
@@ -45,9 +45,10 @@ class AdminOrdersScreen extends StatelessWidget {
                     indicatorColor: Colors.white,
                     labelColor: Colors.white,
                     unselectedLabelColor: Colors.white70,
-                    labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    labelStyle: TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
                     tabs: [
-                      Tab(icon: Icon(Icons.list_alt), text: "DÉTAILS"),
+                      Tab(icon: Icon(Icons.checkroom), text: "MAILLOTS"),
+                      Tab(icon: Icon(Icons.vpn_key), text: "P. CLÉ"),
                       Tab(icon: Icon(Icons.pie_chart), text: "TAILLES"),
                       Tab(icon: Icon(Icons.map), text: "ZONES"),
                     ],
@@ -68,9 +69,9 @@ class AdminOrdersScreen extends StatelessWidget {
                 if (snapshot.hasError) return const Center(child: Text("Erreur."));
                 if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
-                final orders = snapshot.data!.docs;
+                final allOrders = snapshot.data!.docs;
 
-                if (orders.isEmpty) {
+                if (allOrders.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -83,11 +84,15 @@ class AdminOrdersScreen extends StatelessWidget {
                   );
                 }
 
+                final jerseyOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Maillot') ?? false).toList();
+                final keychainOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Porte-clé') ?? false).toList();
+
                 return TabBarView(
                   children: [
-                    _buildOrdersList(orders),
-                    _buildStatsBySize(orders),
-                    _buildStatsByZone(orders),
+                    _buildOrdersList(jerseyOrders),
+                    _buildKeychainOrders(keychainOrders),
+                    _buildStatsBySize(jerseyOrders),
+                    _buildStatsByZone(allOrders),
                   ],
                 );
               },
@@ -95,6 +100,47 @@ class AdminOrdersScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildKeychainOrders(List<QueryDocumentSnapshot> orders) {
+    // Group by member to sum quantities
+    Map<String, Map<String, dynamic>> memberStats = {};
+    for (var doc in orders) {
+      final data = doc.data() as Map<String, dynamic>;
+      final mId = data['memberId'];
+      if (!memberStats.containsKey(mId)) {
+        memberStats[mId] = {
+          'name': data['memberName'],
+          'qty': 0,
+          'zone': data['zone'],
+          'docId': doc.id, // For single delete if needed
+        };
+      }
+      memberStats[mId]!['qty'] += data['quantity'] ?? 1;
+    }
+
+    final members = memberStats.values.toList();
+
+    return ListView.builder(
+      itemCount: members.length,
+      itemBuilder: (context, index) {
+        final m = members[index];
+        final mId = memberStats.keys.elementAt(index);
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.red, child: Icon(Icons.vpn_key, color: Colors.white, size: 16)),
+            title: Text(m['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text("ID: $mId • Zone ${m['zone']}"),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(15)),
+              child: Text("${m['qty']} PCS", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+            ),
+          ),
+        );
+      },
     );
   }
 
