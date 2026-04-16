@@ -9,7 +9,9 @@ class OrderScreen extends StatefulWidget {
 }
 
 class _OrderScreenState extends State<OrderScreen> {
+  String _selectedProduct = 'Maillot'; // 'Maillot' or 'Porte-clé'
   String? _selectedSize;
+  int _quantity = 1;
   final TextEditingController _memberIdController = TextEditingController();
   bool _isSubmitting = false;
 
@@ -18,35 +20,50 @@ class _OrderScreenState extends State<OrderScreen> {
   Future<void> _submitOrder() async {
     final memberId = _memberIdController.text.trim().toUpperCase();
     
-    if (memberId.isEmpty || _selectedSize == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez remplir tous les champs (ID et Taille).")),
-      );
+    if (memberId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Veuillez saisir votre ID membre.")));
+      return;
+    }
+
+    if (_selectedProduct == 'Maillot' && _selectedSize == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Veuillez choisir une taille pour le maillot.")));
       return;
     }
 
     setState(() => _isSubmitting = true);
 
     try {
-      // 1. Verify member exists
       final memberDoc = await FirebaseFirestore.instance.collection('members').doc(memberId).get();
       if (!memberDoc.exists) {
         throw "Membre introuvable. Veuillez vérifier l'ID.";
       }
 
-      // 2. Check if already ordered
-      final orderDoc = await FirebaseFirestore.instance.collection('orders').doc(memberId).get();
-      if (orderDoc.exists) {
-        throw "Vous avez déjà passé une commande (Limite: 1 par membre).";
+      if (_selectedProduct == 'Maillot') {
+        // Check if already ordered jersey
+        final existingJersey = await FirebaseFirestore.instance
+            .collection('orders')
+            .where('memberId', isEqualTo: memberId)
+            .where('product', isEqualTo: 'Maillot Officiel EL ASSIMA')
+            .get();
+            
+        if (existingJersey.docs.isNotEmpty) {
+          throw "Vous avez déjà commandé un maillot (Limite: 1).";
+        }
       }
 
-      // 3. Save order
-      await FirebaseFirestore.instance.collection('orders').doc(memberId).set({
+      // Save order with a unique ID for keychains to allow multiple
+      final orderId = _selectedProduct == 'Maillot' 
+          ? memberId 
+          : "${memberId}_KEY_${DateTime.now().millisecondsSinceEpoch}";
+
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).set({
         'memberId': memberId,
         'memberName': memberDoc.data()?['name'] ?? 'Inconnu',
-        'zone': memberDoc.data()?['zone'] ?? 0, // IMPORTANT: Saving zone for stats
-        'size': _selectedSize,
-        'product': 'Maillot Officiel EL ASSIMA',
+        'zone': memberDoc.data()?['zone'] ?? 0,
+        'size': _selectedProduct == 'Maillot' ? _selectedSize : 'N/A',
+        'quantity': _selectedProduct == 'Maillot' ? 1 : _quantity,
+        'product': _selectedProduct == 'Maillot' ? 'Maillot Officiel EL ASSIMA' : 'Porte-clé Officiel',
+        'price': _selectedProduct == 'Maillot' ? 5500 : 500,
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'En attente',
       });
@@ -56,27 +73,23 @@ class _OrderScreenState extends State<OrderScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Icon(Icons.check_circle, color: Colors.green, size: 60),
-            content: const Text(
-              "Commande validée !\nVotre maillot est réservé.",
+            content: Text(
+              "Commande validée !\nVotre ${_selectedProduct} est réservé.",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("SUPER"),
-              )
-            ],
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("SUPER"))],
           ),
         );
         _memberIdController.clear();
-        setState(() => _selectedSize = null);
+        setState(() {
+          _selectedSize = null;
+          _quantity = 1;
+        });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -90,97 +103,38 @@ class _OrderScreenState extends State<OrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "BOUTIQUE OFFICIELLE",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.red),
-          ),
-          const Text(
-            "Réservez votre maillot exclusif EL ASSIMA",
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
+          const Text("BOUTIQUE OFFICIELLE", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.red)),
+          const Text("Sélectionnez vos articles EL ASSIMA", style: TextStyle(fontSize: 14, color: Colors.grey)),
           const SizedBox(height: 24),
           
-          // Jersey Card
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+          // Product Switcher
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedProduct = 'Maillot'),
+                  child: _buildProductCard('Maillot', '5500 DA', 'maillot.png', _selectedProduct == 'Maillot'),
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Container(
-                      color: Colors.grey[100],
-                      child: Image.asset(
-                        'assets/images/maillot.png', // User should add the generated image here
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stack) => const Icon(Icons.sports_soccer, size: 100, color: Colors.red),
-                      ),
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedProduct = 'Porte-clé'),
+                  child: _buildProductCard('Porte-clé', '500 DA', 'porte_cle.png', _selectedProduct == 'Porte-clé'),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            "Maillot Officiel 2026",
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              "5500 DA",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Qualité Premium - Respirant - Édition Limitée Zone 14.",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
           
           const SizedBox(height: 30),
           
-          // Order Form
-          const Text(
-            "VOTRE COMMANDE",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text("VOTRE COMMANDE", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           
           TextField(
             controller: _memberIdController,
             decoration: InputDecoration(
               labelText: "Identifiant Membre (ID)",
-              hintText: "Ex: AC010",
               prefixIcon: const Icon(Icons.person),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
@@ -190,26 +144,38 @@ class _OrderScreenState extends State<OrderScreen> {
           
           const SizedBox(height: 20),
           
-          const Text("Choisir votre taille :", style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _sizes.map((size) {
-              final bool isSelected = _selectedSize == size;
-              return ChoiceChip(
-                label: Text(size),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() => _selectedSize = selected ? size : null);
-                },
-                selectedColor: Colors.red,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.bold,
-                ),
-              );
-            }).toList(),
-          ),
+          if (_selectedProduct == 'Maillot') ...[
+            const Text("Choisir votre taille :", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _sizes.map((size) {
+                  final bool isSelected = _selectedSize == size;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(size),
+                      selected: isSelected,
+                      onSelected: (selected) => setState(() => _selectedSize = selected ? size : null),
+                      selectedColor: Colors.red,
+                      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ] else ...[
+            const Text("Quantité :", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                IconButton(onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null, icon: const Icon(Icons.remove_circle_outline)),
+                Text(_quantity.toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                IconButton(onPressed: _quantity < 10 ? () => setState(() => _quantity++) : null, icon: const Icon(Icons.add_circle_outline)),
+              ],
+            ),
+          ],
           
           const SizedBox(height: 40),
           
@@ -218,18 +184,36 @@ class _OrderScreenState extends State<OrderScreen> {
             height: 55,
             child: ElevatedButton(
               onPressed: _isSubmitting ? null : _submitOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              ),
-              child: _isSubmitting 
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text("VALIDER LA COMMANDE", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+              child: _isSubmitting ? const CircularProgressIndicator(color: Colors.white) : const Text("VALIDER LA COMMANDE", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
-          
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductCard(String name, String price, String imageName, bool isSelected) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isSelected ? Colors.red : Colors.transparent, width: 3),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.asset('assets/images/$imageName', fit: BoxFit.contain, errorBuilder: (c, e, s) => const Icon(Icons.shopping_bag, size: 40)),
+            ),
+          ),
+          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          Text(price, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10)),
+          const SizedBox(height: 8),
         ],
       ),
     );
