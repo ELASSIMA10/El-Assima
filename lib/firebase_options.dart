@@ -20,28 +20,29 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBUN9UbDnsD0K5E5DxGpGaoQs2xpLnNayE',
-    appId: '1:911900427556:web:230e73ea3b3d1c0db51fb1',
-    messagingSenderId: '911900427556',
-    projectId: 'elite-by-s',
-    authDomain: 'elite-by-s.firebaseapp.com',
-    storageBucket: 'elite-by-s.firebasestorage.app',
+    apiKey: 'AIzaSyBgK8ZKmZ0N329vOTfpiAyYAhPu_mhyTAM',
+    appId: '1:179443689337:web:31ca73ac50811b286931a8',
+    messagingSenderId: '179443689337',
+    projectId: 'app-10-1b5fd',
+    authDomain: 'app-10-1b5fd.firebaseapp.com',
+    storageBucket: 'app-10-1b5fd.firebasestorage.app',
+    measurementId: 'G-3FNWYX8NLE',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyALftq8qXtQALSE3U1Eq-weKUdd5olykA8',
-    appId: '1:911900427556:android:48b3d6dcd96cc0e1b51fb1',
-    messagingSenderId: '911900427556',
-    projectId: 'elite-by-s',
-    storageBucket: 'elite-by-s.firebasestorage.app',
+    apiKey: 'AIzaSyBgK8ZKmZ0N329vOTfpiAyYAhPu_mhyTAM',
+    appId: '1:179443689337:android:placeholder',
+    messagingSenderId: '179443689337',
+    projectId: 'app-10-1b5fd',
+    storageBucket: 'app-10-1b5fd.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBo7b1MlMUiGdHMBDUIf2XVjWK3eWyVvOg',
-    appId: '1:911900427556:ios:970d722b3514a254b51fb1',
-    messagingSenderId: '911900427556',
-    projectId: 'elite-by-s',
-    storageBucket: 'elite-by-s.firebasestorage.app',
+    apiKey: 'AIzaSyBgK8ZKmZ0N329vOTfpiAyYAhPu_mhyTAM',
+    appId: '1:179443689337:ios:placeholder',
+    messagingSenderId: '179443689337',
+    projectId: 'app-10-1b5fd',
+    storageBucket: 'app-10-1b5fd.firebasestorage.app',
     iosBundleId: 'com.supportclub.carteNabil',
   );
 }
