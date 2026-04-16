@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.supportclub.carte"
+    namespace = "com.supportclub.carteNabil"
     compileSdk = 35
 
     compileOptions {
@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.supportclub.carte"
+        applicationId = "com.supportclub.carteNabil"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
