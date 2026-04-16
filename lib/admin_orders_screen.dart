@@ -4,6 +4,32 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AdminOrdersScreen extends StatelessWidget {
   const AdminOrdersScreen({super.key});
 
+  Future<void> _clearOrders(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Vider les commandes ?"),
+        content: const Text("Toutes les commandes de maillots seront supprimées définitivement."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ANNULER")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("OUI, TOUT VIDER", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final snapshot = await FirebaseFirestore.instance.collection('orders').get();
+      final batch = FirebaseFirestore.instance.batch();
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -12,13 +38,24 @@ class AdminOrdersScreen extends StatelessWidget {
         children: [
           Container(
             color: Colors.red.shade900,
-            child: const TabBar(
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              tabs: [
-                Tab(icon: Icon(Icons.pie_chart), text: "PAR TAILLE"),
-                Tab(icon: Icon(Icons.map), text: "PAR ZONE"),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: TabBar(
+                    indicatorColor: Colors.white,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white70,
+                    tabs: [
+                      Tab(icon: Icon(Icons.pie_chart), text: "PAR TAILLE"),
+                      Tab(icon: Icon(Icons.map), text: "PAR ZONE"),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.white),
+                  tooltip: "Réinitialiser les commandes",
+                  onPressed: () => _clearOrders(context),
+                ),
               ],
             ),
           ),
