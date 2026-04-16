@@ -135,7 +135,7 @@ class AdminOrdersScreen extends StatelessWidget {
           child: Text(
             "TOTAL PORTE-CLÉS : $totalPcs PIÈCES",
             textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.black, fontSize: 18, color: Colors.black),
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.black),
           ),
         ),
         Expanded(
@@ -174,7 +174,7 @@ class AdminOrdersScreen extends StatelessWidget {
           child: Text(
             "TOTAL MAILLOTS : ${orders.length}",
             textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.black, fontSize: 18, color: Colors.red),
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.red),
           ),
         ),
         Expanded(
@@ -227,10 +227,9 @@ class AdminOrdersScreen extends StatelessWidget {
       },
             ),
           ),
-        ),
-      ],
-    );
-  }
+        ],
+      );
+    }
 
   Widget _buildStatsBySize(List<QueryDocumentSnapshot> orders) {
     Map<String, int> stats = {};
@@ -308,7 +307,7 @@ class AdminOrdersScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("ZONE $zone", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                    Text("ZONE $zone", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
                     const Icon(Icons.location_on, color: Colors.red),
                   ],
                 ),
@@ -356,7 +355,7 @@ class AdminOrdersScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey)),
-        Text("$value", style: TextStyle(fontSize: 22, fontWeight: FontWeight.black, color: color)),
+        Text("$value", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)),
       ],
     );
   }
