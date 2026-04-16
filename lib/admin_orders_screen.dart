@@ -264,19 +264,30 @@ class AdminOrdersScreen extends StatelessWidget {
   }
 
   Widget _buildStatsByZone(List<QueryDocumentSnapshot> orders) {
-    // Map<Zone, Map<Size, Count>>
-    Map<int, Map<String, int>> zoneStats = {};
+    // Map<Zone, Map<ProductType, Count>>
+    Map<int, Map<String, int>> zoneProductStats = {};
+    // Map<Zone, Map<Size, Count>> for Jerseys
+    Map<int, Map<String, int>> zoneSizeStats = {};
     
     for (var doc in orders) {
       final data = doc.data() as Map<String, dynamic>;
       final zone = data['zone'] ?? 0;
-      final size = data['size'] ?? 'Unknown';
+      final product = data['product']?.toString() ?? 'Inconnu';
       
-      zoneStats.putIfAbsent(zone, () => {});
-      zoneStats[zone]![size] = (zoneStats[zone]![size] ?? 0) + 1;
+      zoneProductStats.putIfAbsent(zone, () => {'Maillots': 0, 'Porte-clés': 0});
+      if (product.contains('Maillot')) {
+        zoneProductStats[zone]!['Maillots'] = (zoneProductStats[zone]!['Maillots'] ?? 0) + 1;
+        
+        final size = data['size'] ?? 'Unknown';
+        zoneSizeStats.putIfAbsent(zone, () => {});
+        zoneSizeStats[zone]![size] = (zoneSizeStats[zone]![size] ?? 0) + 1;
+      } else if (product.contains('Porte-clé')) {
+        final qty = data['quantity'] ?? 1;
+        zoneProductStats[zone]!['Porte-clés'] = (zoneProductStats[zone]!['Porte-clés'] ?? 0) + (qty as int);
+      }
     }
 
-    final sortedZones = zoneStats.keys.toList()..sort();
+    final sortedZones = zoneProductStats.keys.toList()..sort();
     final sortedSizes = ['S', 'M', 'L', 'XL', 'XXL'];
 
     return ListView.builder(
@@ -284,8 +295,8 @@ class AdminOrdersScreen extends StatelessWidget {
       itemCount: sortedZones.length,
       itemBuilder: (context, index) {
         final zone = sortedZones[index];
-        final sizes = zoneStats[zone]!;
-        int totalInZone = sizes.values.fold(0, (sum, val) => sum + val);
+        final products = zoneProductStats[zone]!;
+        final sizes = zoneSizeStats[zone] ?? {};
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -297,43 +308,56 @@ class AdminOrdersScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("ZONE $zone", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
-                    Text("$totalInZone COMMANDES", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                    Text("ZONE $zone", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                    const Icon(Icons.location_on, color: Colors.red),
                   ],
                 ),
                 const Divider(),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: sortedSizes.map((size) {
-                    final count = sizes[size] ?? 0;
-                    return Column(
-                      children: [
-                        Text(size, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: count > 0 ? Colors.black : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Text(
-                            "$count",
-                            style: TextStyle(
-                              color: count > 0 ? Colors.white : Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+                Row(
+                  children: [
+                    _buildMiniStat("MAILLOTS", products['Maillots'] ?? 0, Colors.red),
+                    const SizedBox(width: 20),
+                    _buildMiniStat("P. CLÉS", products['Porte-clés'] ?? 0, Colors.amber.shade700),
+                  ],
                 ),
+                if (products['Maillots']! > 0) ...[
+                  const SizedBox(height: 16),
+                  const Text("DÉTAIL TAILLES :", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: sortedSizes.map((size) {
+                      final count = sizes[size] ?? 0;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: count > 0 ? Colors.black : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "$size: $count",
+                          style: TextStyle(color: count > 0 ? Colors.white : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMiniStat(String label, int value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey)),
+        Text("$value", style: TextStyle(fontSize: 22, fontWeight: FontWeight.black, color: color)),
+      ],
     );
   }
 }
