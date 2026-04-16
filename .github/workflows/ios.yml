@@ -1,9 +1,9 @@
 name: CarteNabil-iOS-Build-Final-Fix
 
-on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch:
+# on:
+#   push:
+#     branches: [ main, master ]
+#   workflow_dispatch:
 
 jobs:
   build:

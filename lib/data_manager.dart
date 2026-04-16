@@ -13,22 +13,8 @@ class DataManager {
     
     print("Initialisation de la base de données (première fois)...");
 
-    // 2. Sample data across different zones
+    // 2. Sample data for Zone 14 ONLY
     final List<Map<String, dynamic>> initialData = [
-      {
-        'cardId': 'AB005',
-        'name': 'Lafri Ilyes',
-        'is_present': false,
-        'matricule': 'AB005',
-        'zone': 5,
-      },
-      {
-        'cardId': 'AN001',
-        'name': 'Sidou Charefi',
-        'is_present': false,
-        'matricule': 'AN001',
-        'zone': 1,
-      },
       {
         'cardId': 'AC001',
         'name': 'Laroui Souheib',
@@ -42,27 +28,6 @@ class DataManager {
         'is_present': false,
         'matricule': 'AC010',
         'zone': 14,
-      },
-      {
-        'cardId': 'AC002',
-        'name': 'Brahimi Mohamed',
-        'is_present': false,
-        'matricule': 'AC002',
-        'zone': 1,
-      },
-      {
-        'cardId': 'AC003',
-        'name': 'Ziani Mourad',
-        'is_present': false,
-        'matricule': 'AC003',
-        'zone': 5,
-      },
-      {
-        'cardId': 'AC004',
-        'name': 'Belmadi Djamel',
-        'is_present': false,
-        'matricule': 'AC004',
-        'zone': 7,
       },
       {
         'cardId': 'AC105',

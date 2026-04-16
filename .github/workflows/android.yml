@@ -1,10 +1,10 @@
 # Trigger Build Final v6 - Optimized Structural Sync
 name: CarteNabil-Android-Build-APK-Final
 
-on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch:
+# on:
+#   push:
+#     branches: [ main, master ]
+#   workflow_dispatch:
 
 jobs:
   build:
