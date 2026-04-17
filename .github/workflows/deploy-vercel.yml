@@ -1,0 +1,53 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Web Support
+        run: flutter config --enable-web
+
+      - name: Ensure Web Folder is Complete
+        run: flutter create --org com.supportclub.carte --project-name carte_nabil . --platforms=web --no-overwrite
+
+      - name: Fix App Name & Manifest
+        run: |
+          sed -i 's/<title>carte_nabil<\/title>/<title>EL ASSIMA<\/title>/g' web/index.html || true
+          sed -i 's/"name": "carte_nabil"/"name": "EL ASSIMA"/g' web/manifest.json || true
+          sed -i 's/"short_name": "carte_nabil"/"short_name": "EL ASSIMA"/g' web/manifest.json || true
+          sed -i 's/"background_color": "#0175C2"/"background_color": "#FFC107"/g' web/manifest.json || true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Prepare Deployment Folder
+        run: cp vercel.json build/web/
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-version: latest
+          working-directory: build/web
+          vercel-args: '--prod'
