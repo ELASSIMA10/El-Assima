@@ -118,6 +118,9 @@ jobs:
           pod install --repo-update
           cd ..
 
+      - name: Generate Launcher Icons
+        run: flutter pub run flutter_launcher_icons
+
       - name: Build iOS
         run: |
           flutter clean
