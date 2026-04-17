@@ -52,7 +52,7 @@ class _MembersListScreenState extends State<MembersListScreen> {
 
     return Column(
       children: [
-        // Header
+        // Header (Text "GESTION DES ZONES" REMOVED AS REQUESTED)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -62,20 +62,8 @@ class _MembersListScreenState extends State<MembersListScreen> {
           ),
           child: Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "GESTION DES ZONES",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1.5),
-                    ),
-                    Text(
-                      "Suivi des entrées en temps réel",
-                      style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
-                    ),
-                  ],
-                ),
+              const Expanded(
+                child: SizedBox(), // Space where text used to be
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -149,7 +137,7 @@ class _MembersListScreenState extends State<MembersListScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "MEMBRES DE LA ZONE ($_selectedZone)",
+                          "DÉTAILS DES ENTRÉES - ZONE $_selectedZone",
                           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: isDark ? Colors.white70 : Colors.blueGrey),
                         ),
                         if (widget.isAdmin)
