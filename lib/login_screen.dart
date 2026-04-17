@@ -15,9 +15,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void _checkPin() {
     final code = _pinController.text;
     if (code == "2020") {
-      widget.onLoginSuccess(true); // Is Admin
+      widget.onLoginSuccess(true); 
     } else if (code == "0101") {
-      widget.onLoginSuccess(false); // Is Standard User
+      widget.onLoginSuccess(false); 
     } else {
       setState(() {
         _error = "Code incorrect. Veuillez réessayer.";
@@ -41,14 +41,16 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo
+            // Updated Logo to IMG_9510.jpeg
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(10),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: Image.asset('assets/images/logo_2.jpg', height: 100),
+              child: ClipOval(
+                child: Image.asset('assets/images/IMG_9510.jpeg', height: 120, width: 120, fit: BoxFit.cover),
+              ),
             ),
             const SizedBox(height: 30),
             const Text(
@@ -67,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 40),
             
-            // PIN Input
             Container(
               width: 200,
               child: TextField(
@@ -76,9 +77,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white, fontSize: 32, letterSpacing: 10),
-                decoration: InputDecoration(
-                  enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                decoration: const InputDecoration(
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
                   hintText: "••••",
                   hintStyle: TextStyle(color: Colors.white24),
                 ),

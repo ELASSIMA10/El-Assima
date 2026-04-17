@@ -108,7 +108,6 @@ class _MainScreenState extends State<MainScreen> {
     final List<NavigationDestination> destinations = [];
 
     if (widget.isAdmin) {
-      // Admin: Access to everything
       pages.addAll([
         const ScannerScreen(),
         MembersListScreen(isAdmin: true),
@@ -124,23 +123,38 @@ class _MainScreenState extends State<MainScreen> {
         const NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history, color: Colors.red), label: 'Historique'),
       ]);
     } else {
-      // User 0101: ONLY BOUTIQUE (Zones removed as requested)
       pages.add(const OrderScreen());
       destinations.add(const NavigationDestination(icon: Icon(Icons.shopping_bag_outlined), selectedIcon: Icon(Icons.shopping_bag, color: Colors.red), label: 'BOUTIQUE'));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        toolbarHeight: 70,
-        title: Image.asset('assets/images/IMG_9510.jpeg', height: 60, fit: BoxFit.contain),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white70),
-            onPressed: widget.onLogout,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80), // Larger AppBar
+        child: AppBar(
+          centerTitle: true,
+          flexibleSpace: Container(
+            color: Colors.black,
+            child: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Image.asset(
+                    'assets/images/IMG_9510.jpeg',
+                    height: 70, 
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white70),
+              onPressed: widget.onLogout,
+            ),
+          ],
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -152,7 +166,6 @@ class _MainScreenState extends State<MainScreen> {
         ),
         child: pages[_currentIndex],
       ),
-      // Hide bottom navigation if only one tab is available
       bottomNavigationBar: destinations.length > 1 ? NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (int index) {
