@@ -43,6 +43,14 @@ jobs:
       - name: Build Web
         run: flutter build web --release --web-renderer=canvaskit
 
+      - name: Build APK for Direct Download
+        run: flutter build apk --release
+
+      - name: Copy APK to Web Folder
+        run: |
+          mkdir -p build/web/downloads
+          cp build/app/outputs/flutter-apk/app-release.apk build/web/downloads/ASSIMA-10.apk
+
       - name: Verify Build
         run: |
           echo "Checking build/web content:"
