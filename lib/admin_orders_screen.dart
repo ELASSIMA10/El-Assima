@@ -104,8 +104,8 @@ class AdminOrdersScreen extends StatelessWidget {
                 return TabBarView(
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildOrdersList(context, jerseyOrders, "MAILLOTS", Colors.red),
-                    _buildOrdersList(context, keychainOrders, "PORTE-CLÉS", Colors.amber.shade800),
+                    _buildJerseyOrders(context, jerseyOrders),
+                    _buildKeychainOrders(context, keychainOrders),
                     _buildStatsBySize(jerseyOrders),
                     _buildStatsByZone(allOrders),
                   ],
@@ -118,10 +118,10 @@ class AdminOrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOrdersList(BuildContext context, List<QueryDocumentSnapshot> orders, String title, Color themeColor) {
+  Widget _buildJerseyOrders(BuildContext context, List<QueryDocumentSnapshot> orders) {
     return Column(
       children: [
-        _buildSummaryHeader("TOTAL $title", "${orders.length} UNITÉS", themeColor),
+        _buildSummaryHeader("TOTAL MAILLOTS", "${orders.length} UNITÉS", Colors.red),
         Expanded(
           child: ListView.builder(
             physics: const BouncingScrollPhysics(),
@@ -134,11 +134,68 @@ class AdminOrdersScreen extends StatelessWidget {
                 data['memberName'] ?? 'Inconnu',
                 "ID: ${data['memberId']} • Zone ${data['zone']}",
                 data['size'] ?? 'N/A',
-                title.contains('MAILLOT') ? Icons.checkroom_outlined : Icons.vpn_key_outlined,
-                themeColor,
+                Icons.checkroom_outlined,
+                Colors.red,
                 () async {
                   final confirm = await _showConfirmDelete(context, data['memberName']);
                   if (confirm == true) await FirebaseFirestore.instance.collection('orders').doc(doc.id).delete();
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKeychainOrders(BuildContext context, List<QueryDocumentSnapshot> orders) {
+    Map<String, Map<String, dynamic>> grouped = {};
+    for (var doc in orders) {
+      final data = doc.data() as Map<String, dynamic>;
+      final String mId = data['memberId'] ?? 'unknown';
+      final int qty = data['quantity'] ?? 1;
+      
+      if (!grouped.containsKey(mId)) {
+        grouped[mId] = {
+          'name': data['memberName'] ?? 'Inconnu',
+          'zone': data['zone'],
+          'totalQty': 0,
+          'docIds': <String>[],
+        };
+      }
+      grouped[mId]!['totalQty'] += qty;
+      (grouped[mId]!['docIds'] as List<String>).add(doc.id);
+    }
+
+    final sortedItems = grouped.values.toList();
+    int totalPcs = 0;
+    for (var item in sortedItems) totalPcs += item['totalQty'] as int;
+
+    return Column(
+      children: [
+        _buildSummaryHeader("TOTAL PORTE-CLÉS", "$totalPcs PCS", Colors.amber.shade800),
+        Expanded(
+          child: ListView.builder(
+            physics: const BouncingScrollPhysics(),
+            itemCount: sortedItems.length,
+            itemBuilder: (context, index) {
+              final item = sortedItems[index];
+              return _buildBaseOrderCard(
+                context,
+                item['name'],
+                "ID: ${grouped.keys.elementAt(index)} • Zone ${item['zone']}",
+                "${item['totalQty']} PCS",
+                Icons.vpn_key_outlined,
+                Colors.amber.shade800,
+                () async {
+                  final confirm = await _showConfirmDelete(context, item['name']);
+                  if (confirm == true) {
+                    final batch = FirebaseFirestore.instance.batch();
+                    for (var id in (item['docIds'] as List<String>)) {
+                      batch.delete(FirebaseFirestore.instance.collection('orders').doc(id));
+                    }
+                    await batch.commit();
+                  }
                 },
               );
             },
@@ -195,10 +252,11 @@ class AdminOrdersScreen extends StatelessWidget {
               decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
               child: Text(trailing, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
             ),
-            IconButton(
-              icon: Icon(Icons.close_rounded, color: Colors.red.shade300, size: 20),
-              onPressed: onDelete,
-            ),
+            if (isAdmin) // Only show delete button for admins
+              IconButton(
+                icon: Icon(Icons.close_rounded, color: Colors.red.shade300, size: 20),
+                onPressed: onDelete,
+              ),
           ],
         ),
       ),
