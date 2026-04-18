@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:barcode_scan2/barcode_scan2.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 
@@ -11,33 +12,111 @@ class ScannerPlatformImplementation extends StatefulWidget {
 }
 
 class _ScannerPlatformImplementationState extends State<ScannerPlatformImplementation> {
+  final TextRecognizer _textRecognizer = TextRecognizer();
+  final ImagePicker _picker = ImagePicker();
+  
   bool _isProcessing = false;
   bool _showSuccessOverlay = false;
   bool _showErrorOverlay = false;
-  String _scanResult = "Appuyez sur SCAN pour commencer";
+  String _scanResult = "Appuyez sur SCAN pour scanner la carte";
+  
+  Set<String> _validMembersList = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
+  
+  Future<void> _loadMembers() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('members').get();
+      _validMembersList = snapshot.docs.map((d) => d.id.toUpperCase()).toSet();
+    } catch (e) {
+      debugPrint("Load members error: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _textRecognizer.close();
+    super.dispose();
+  }
 
   Future<void> _scanNative() async {
     if (_isProcessing) return;
+    
     try {
-      final result = await BarcodeScanner.scan(
-        options: const ScanOptions(
-          strings: {'cancel': 'Annuler', 'flash_on': 'Flash', 'flash_off': 'Flash'},
-        ),
+      if (mounted) setState(() => _isProcessing = true);
+      
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera, 
+        preferredCameraDevice: CameraDevice.rear,
       );
-      final barcode = result.rawContent;
-          
-      if (barcode.trim().isNotEmpty && barcode != '-1') {
-         if (mounted) setState(() => _isProcessing = true);
-         await _verifyMember(barcode.trim().toUpperCase());
+      
+      if (photo == null) {
+        if (mounted) setState(() => _isProcessing = false);
+        return;
       }
-    } on PlatformException {
+      
+      final InputImage inputImage = InputImage.fromFilePath(photo.path);
+      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+      
+      // Recharger la liste si vide
+      if (_validMembersList.isEmpty) await _loadMembers();
+
+      String? foundMatricule;
+      final fullText = recognizedText.text.toUpperCase();
+      
+      // 1. Recherche stricte par mot
+      for (TextBlock block in recognizedText.blocks) {
+        for (TextLine line in block.lines) {
+          for (TextElement element in line.elements) {
+            final word = element.text.toUpperCase().trim();
+            if (word.length >= 3 && _validMembersList.contains(word)) {
+               foundMatricule = word;
+               break;
+            }
+          }
+          if (foundMatricule != null) break;
+        }
+        if (foundMatricule != null) break;
+      }
+      
+      // 2. Recherche approximative (mots collés)
+      if (foundMatricule == null) {
+        for (String validId in _validMembersList) {
+          if (fullText.contains(validId)) {
+            foundMatricule = validId;
+            break;
+          }
+        }
+      }
+
+      if (foundMatricule != null) {
+        await _verifyMember(foundMatricule);
+      } else {
+        if (mounted) {
+          setState(() {
+            _showErrorOverlay = true;
+            _scanResult = "⚠️ AUCUN MATRICULE RECONNU SUR LA CARTE !";
+            _isProcessing = false;
+          });
+          Future.delayed(const Duration(seconds: 4), () {
+            if (mounted) setState(() { 
+              _showErrorOverlay = false;
+              _scanResult = "Appuyez sur SCAN pour scanner la carte";
+            });
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur lors du lancement du scanner.')),
+          SnackBar(content: Text('Erreur Caméra: $e')),
         );
+        setState(() => _isProcessing = false);
       }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -50,13 +129,14 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
       if (!docRef.exists) {
         if (mounted) {
           setState(() {
+            _isProcessing = false;
             _showErrorOverlay = true;
             _scanResult = "⚠️ MEMBRE INTROUVABLE !\nMatricule: $searchId";
           });
           Future.delayed(const Duration(seconds: 4), () {
             if (mounted) setState(() { 
               _showErrorOverlay = false;
-              _scanResult = "Appuyez sur SCAN pour commencer";
+              _scanResult = "Appuyez sur SCAN pour scanner la carte";
             });
           });
         }
@@ -70,13 +150,14 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
       if (data['is_present'] ?? false) {
         HapticFeedback.vibrate();
         if (mounted) setState(() {
+          _isProcessing = false;
           _showErrorOverlay = true;
           _scanResult = "⚠️ DÉJÀ ENTRÉ !\n$foundName ($searchId)";
         });
         Future.delayed(const Duration(seconds: 4), () {
           if (mounted) setState(() {
             _showErrorOverlay = false;
-            _scanResult = "Appuyez sur SCAN pour commencer";
+            _scanResult = "Appuyez sur SCAN pour scanner la carte";
           });
         });
         return;
@@ -96,30 +177,29 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
 
       HapticFeedback.heavyImpact();
       if (mounted) setState(() {
+        _isProcessing = false;
         _showSuccessOverlay = true;
         _scanResult = "✅ BIENVENU $foundName";
       });
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) setState(() {
            _showSuccessOverlay = false;
-           _scanResult = "Appuyez sur SCAN pour commencer";
+           _scanResult = "Appuyez sur SCAN pour scanner la carte";
         });
       });
-      
-      // Relancer le scan automatiquement si on veut un flow rapide :
-      // Future.delayed(const Duration(seconds: 1), () => _scanNative());
       
     } catch (e) {
       debugPrint("Verify Error: $e");
       if (mounted) {
           setState(() {
+            _isProcessing = false;
             _showErrorOverlay = true;
             _scanResult = "⚠️ ERREUR RESEAU !";
           });
           Future.delayed(const Duration(seconds: 4), () {
             if (mounted) setState(() {
               _showErrorOverlay = false;
-              _scanResult = "Appuyez sur SCAN pour commencer";
+              _scanResult = "Appuyez sur SCAN pour scanner la carte";
             });
           });
       }
@@ -155,7 +235,7 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
                     children: [
                       CircularProgressIndicator(color: Colors.white),
                       SizedBox(height: 16),
-                      Text("Vérification...", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                      Text("Lecture de la carte...", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
                     ],
                   )
                 : Text(
@@ -167,7 +247,7 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
             
             const SizedBox(height: 50),
             
-            // Scan Button
+            // Scan Photo Button
             GestureDetector(
               onTap: _scanNative,
               child: Container(
@@ -184,9 +264,9 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
                 child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.qr_code_scanner, size: 70, color: Colors.black),
+                    Icon(Icons.document_scanner_outlined, size: 70, color: Colors.black),
                     SizedBox(height: 10),
-                    Text("SCANNER", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black)),
+                    Text("PHOTOGRAPHIER", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.black)),
                   ],
                 ),
               ),
@@ -223,8 +303,8 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
                   await _verifyMember(result);
                 }
               },
-              icon: const Icon(Icons.keyboard, color: Colors.white54),
-              label: const Text("SAISIE MANUELLE", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+              icon: const Icon(Icons.keyboard, color: Colors.white54, size: 28),
+              label: const Text("SAISIE MANUELLE CLAVIER", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
             ),
           ],
         ),
