@@ -21,35 +21,14 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Diagnostic
-        run: flutter --version
-
       - name: Enable Web Support
         run: flutter config --enable-web
-
-      - name: Ensure Web Folder is Complete
-        run: flutter create --org com.supportclub.carte --project-name carte_nabil . --platforms=web --no-overwrite
-
-      - name: Fix App Name & Manifest
-        run: |
-          sed -i 's/<title>carte_nabil<\/title>/<title>ASSIMA-10<\/title>/g' web/index.html || true
-          sed -i 's/"name": "carte_nabil"/"name": "ASSIMA-10"/g' web/manifest.json || true
-          sed -i 's/"short_name": "carte_nabil"/"short_name": "ASSIMA-10"/g' web/manifest.json || true
-          sed -i 's/"background_color": "#0175C2"/"background_color": "#FFC107"/g' web/manifest.json || true
 
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Build Web
+      - name: Build Flutter Web
         run: flutter build web --release --web-renderer=canvaskit
-
-      - name: Build APK for Direct Download
-        run: flutter build apk --release
-
-      - name: Copy APK to Web Folder
-        run: |
-          mkdir -p build/web/downloads
-          cp build/app/outputs/flutter-apk/app-release.apk build/web/downloads/ASSIMA-10.apk
 
       - name: Verify Build
         run: |
