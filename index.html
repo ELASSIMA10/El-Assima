@@ -1012,16 +1012,28 @@
         <p>Historique et statistiques des commandes</p>
       </div>
 
-      <div class="stats-grid">
+      <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card">
-          <div class="stat-value" id="cmd-jerseys">0</div>
+          <div class="stat-value" id="cmd-jerseys" style="font-size:1.5rem">0</div>
           <div class="stat-label">Maillots</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" id="cmd-keys">0</div>
-          <div class="stat-label">Porte-clés</div>
+          <div class="stat-value" id="cmd-keys" style="font-size:1.5rem">0</div>
+          <div class="stat-label">P. clés</div>
         </div>
-        <div class="stat-card" style="grid-column: span 2">
+        <div class="stat-card">
+          <div class="stat-value" id="cmd-pins" style="font-size:1.5rem">0</div>
+          <div class="stat-label">Pins</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="cmd-stickers" style="font-size:1.5rem">0</div>
+          <div class="stat-label">Stickers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="cmd-beret" style="font-size:1.5rem">0</div>
+          <div class="stat-label">Bérets</div>
+        </div>
+        <div class="stat-card" style="grid-column: span 3">
           <div class="stat-value" id="cmd-total">0 DA</div>
           <div class="stat-label">Total des ventes</div>
         </div>
@@ -1130,6 +1142,9 @@ const PRODUCTS = [
   { id: "j3", name: "Maillot 3eme Tenue", type: "jersey", emoji: "🔴", price: 3200, desc: "Édition spéciale supporter 2025" },
   { id: "k1", name: "Porte-clé Logo EA", type: "keychain", emoji: "🔑", price: 500, desc: "Porte-clé métal avec logo officiel EA" },
   { id: "k2", name: "Porte-clé Collector", type: "keychain", emoji: "⭐", price: 800, desc: "Édition limitée 2025, numéroté", isNew: true },
+  { id: "p1", name: "Pins", type: "pins", emoji: "📌", price: 500, desc: "Pins officiel" },
+  { id: "s1", name: "Stickers", type: "stickers", emoji: "🏷️", price: 300, desc: "Stickers officiels" },
+  { id: "b1", name: "Béret", type: "beret", emoji: "🧢", price: 3000, desc: "Béret officiel", isNew: true },
 ];
 
 let isAdmin = false;
@@ -1496,10 +1511,16 @@ function updateCartUI() {
 function updateOrdersPage() {
   const jerseyCount = cart.filter(i => i.type === 'jersey').length;
   const keyCount = cart.filter(i => i.type === 'keychain').length;
+  const pinsCount = cart.filter(i => i.type === 'pins').length;
+  const stickersCount = cart.filter(i => i.type === 'stickers').length;
+  const beretCount = cart.filter(i => i.type === 'beret').length;
   const totalAmount = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
   document.getElementById('cmd-jerseys').textContent = jerseyCount;
   document.getElementById('cmd-keys').textContent = keyCount;
+  document.getElementById('cmd-pins').textContent = pinsCount;
+  document.getElementById('cmd-stickers').textContent = stickersCount;
+  document.getElementById('cmd-beret').textContent = beretCount;
   document.getElementById('cmd-total').textContent = totalAmount.toLocaleString() + ' DA';
 
   const list = document.getElementById('orders-list');

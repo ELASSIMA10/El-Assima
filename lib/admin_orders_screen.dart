@@ -37,7 +37,7 @@ class AdminOrdersScreen extends StatelessWidget {
     final cardBgColor = isDark ? Colors.grey[900] : Colors.white;
 
     return DefaultTabController(
-      length: 4,
+      length: 7,
       child: Column(
         children: [
           Container(
@@ -47,12 +47,16 @@ class AdminOrdersScreen extends StatelessWidget {
               children: [
                 const Expanded(
                   child: TabBar(
+                    isScrollable: true,
                     indicatorColor: Colors.red,
                     indicatorWeight: 4, labelColor: Colors.white, unselectedLabelColor: Colors.white38,
                     labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     tabs: [
                       Tab(icon: Icon(Icons.checkroom_outlined, size: 20), text: "MAILLOTS"),
                       Tab(icon: Icon(Icons.vpn_key_outlined, size: 20), text: "P. CLÉ"),
+                      Tab(icon: Icon(Icons.push_pin_outlined, size: 20), text: "PINS"),
+                      Tab(icon: Icon(Icons.sell_outlined, size: 20), text: "STICKERS"),
+                      Tab(icon: Icon(Icons.face_retouching_natural, size: 20), text: "BÉRETS"),
                       Tab(icon: Icon(Icons.analytics_outlined, size: 20), text: "TAILLES"),
                       Tab(icon: Icon(Icons.grid_view_outlined, size: 20), text: "ZONES"),
                     ],
@@ -78,12 +82,18 @@ class AdminOrdersScreen extends StatelessWidget {
 
                 final jerseyOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Maillot') ?? false).toList();
                 final keychainOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Porte-clé') ?? false).toList();
+                final pinsOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Pins') ?? false).toList();
+                final stickersOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Stickers') ?? false).toList();
+                final beretsOrders = allOrders.where((d) => (d.data() as Map)['product']?.toString().contains('Béret') ?? false).toList();
 
                 return TabBarView(
                   physics: const BouncingScrollPhysics(),
                   children: [
                     _buildJerseyOrders(context, jerseyOrders, cardBgColor),
-                    _buildKeychainOrders(context, keychainOrders, cardBgColor),
+                    _buildGenericOrders(context, keychainOrders, 'PORTE-CLÉS', Icons.vpn_key_outlined, Colors.amber.shade800, cardBgColor),
+                    _buildGenericOrders(context, pinsOrders, 'PINS', Icons.push_pin_outlined, Colors.blue, cardBgColor),
+                    _buildGenericOrders(context, stickersOrders, 'STICKERS', Icons.sell_outlined, Colors.purple, cardBgColor),
+                    _buildGenericOrders(context, beretsOrders, 'BÉRETS', Icons.face_retouching_natural, Colors.green, cardBgColor),
                     _buildStatsBySize(jerseyOrders, cardBgColor),
                     _buildStatsByZone(allOrders, cardBgColor),
                   ],
@@ -116,7 +126,7 @@ class AdminOrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKeychainOrders(BuildContext context, List<QueryDocumentSnapshot> orders, Color? cardBg) {
+  Widget _buildGenericOrders(BuildContext context, List<QueryDocumentSnapshot> orders, String title, IconData icon, Color color, Color? cardBg) {
     Map<String, Map<String, dynamic>> grouped = {};
     for (var doc in orders) {
       final data = doc.data() as Map<String, dynamic>;
@@ -128,13 +138,13 @@ class AdminOrdersScreen extends StatelessWidget {
     final sortedItems = grouped.values.toList();
     return Column(
       children: [
-        _buildSummaryHeader("TOTAL PORTE-CLÉS", "${sortedItems.fold(0, (p, c) => (p as int) + (c['totalQty'] as int))} PCS", Colors.amber.shade800),
+        _buildSummaryHeader("TOTAL $title", "${sortedItems.fold(0, (p, c) => (p as int) + (c['totalQty'] as int))} PCS", color),
         Expanded(
           child: ListView.builder(
             itemCount: sortedItems.length,
             itemBuilder: (context, index) {
               final item = sortedItems[index];
-              return _buildBaseOrderCard(context, item['name'], "ID: ${grouped.keys.elementAt(index)} • Zone ${item['zone']}", "${item['totalQty']} PCS", Icons.vpn_key_outlined, Colors.amber.shade800, cardBg, () async {
+              return _buildBaseOrderCard(context, item['name'], "ID: ${grouped.keys.elementAt(index)} • Zone ${item['zone']}", "${item['totalQty']} PCS", icon, color, cardBg, () async {
                 final confirm = await _showConfirmDelete(context, item['name']);
                 if (confirm == true) {
                   final batch = FirebaseFirestore.instance.batch();
@@ -199,15 +209,32 @@ class AdminOrdersScreen extends StatelessWidget {
     for (var doc in orders) {
       final d = doc.data() as Map<String, dynamic>;
       final z = d['zone'] ?? 0;
-      stats.putIfAbsent(z, () => {'Maillots': 0, 'Porte-clés': 0});
+      stats.putIfAbsent(z, () => {'Maillots': 0, 'Porte-clés': 0, 'Pins': 0, 'Stickers': 0, 'Bérets': 0});
       if (d['product']?.toString().contains('Maillot') ?? false) stats[z]!['Maillots'] = (stats[z]!['Maillots'] ?? 0) + 1;
       else if (d['product']?.toString().contains('Porte-clé') ?? false) stats[z]!['Porte-clés'] = (stats[z]!['Porte-clés'] ?? 0) + (d['quantity'] as int);
+      else if (d['product']?.toString().contains('Pins') ?? false) stats[z]!['Pins'] = (stats[z]!['Pins'] ?? 0) + (d['quantity'] as int);
+      else if (d['product']?.toString().contains('Stickers') ?? false) stats[z]!['Stickers'] = (stats[z]!['Stickers'] ?? 0) + (d['quantity'] as int);
+      else if (d['product']?.toString().contains('Béret') ?? false) stats[z]!['Bérets'] = (stats[z]!['Bérets'] ?? 0) + (d['quantity'] as int);
     }
     final sorted = stats.keys.toList()..sort();
     return ListView.builder(padding: const EdgeInsets.all(20), itemCount: sorted.length, itemBuilder: (context, index) {
       final z = sorted[index];
       final p = stats[z]!;
-      return Container(margin: const EdgeInsets.only(bottom: 16), padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade100)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("ZONE $z", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)), const SizedBox(height: 16), Row(children: [_miniStat("MAILLOTS", p['Maillots']!, Colors.red), const SizedBox(width: 32), _miniStat("P. CLÉS", p['Porte-clés']!, Colors.amber.shade700)])]));
+      return Container(margin: const EdgeInsets.only(bottom: 16), padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade100)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text("ZONE $z", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)), 
+        const SizedBox(height: 16), 
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _miniStat("MAILLOTS", p['Maillots']!, Colors.red), 
+            _miniStat("P. CLÉS", p['Porte-clés']!, Colors.amber.shade700),
+            _miniStat("PINS", p['Pins']!, Colors.blue),
+            _miniStat("STICKERS", p['Stickers']!, Colors.purple),
+            _miniStat("BÉRETS", p['Bérets']!, Colors.green),
+          ]
+        )
+      ]));
     });
   }
 
