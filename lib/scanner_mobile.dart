@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 
@@ -19,10 +19,14 @@ class _ScannerPlatformImplementationState extends State<ScannerPlatformImplement
   Future<void> _scanNative() async {
     if (_isProcessing) return;
     try {
-      final barcode = await FlutterBarcodeScanner.scanBarcode(
-          '#D32F2F', 'ANNULER', true, ScanMode.BARCODE);
+      final result = await BarcodeScanner.scan(
+        options: const ScanOptions(
+          strings: {'cancel': 'Annuler', 'flash_on': 'Flash', 'flash_off': 'Flash'},
+        ),
+      );
+      final barcode = result.rawContent;
           
-      if (barcode != '-1' && barcode.trim().isNotEmpty) {
+      if (barcode.trim().isNotEmpty && barcode != '-1') {
          if (mounted) setState(() => _isProcessing = true);
          await _verifyMember(barcode.trim().toUpperCase());
       }
