@@ -196,12 +196,58 @@ class AdminOrdersScreen extends StatelessWidget {
   }
 
   Widget _buildStatsBySize(List<QueryDocumentSnapshot> orders, Color? cardBg) {
-    Map<String, int> stats = {};
+    Map<int, Map<String, int>> statsByZone = {};
     for (var doc in orders) {
-      final size = (doc.data() as Map<String, dynamic>)['size'] ?? 'Unknown';
-      stats[size] = (stats[size] ?? 0) + 1;
+      final d = doc.data() as Map<String, dynamic>;
+      final size = d['size']?.toString() ?? 'Unknown';
+      if (size == 'N/A' || size == 'Unknown') continue; 
+      final z = d['zone'] ?? 0;
+      statsByZone.putIfAbsent(z, () => {});
+      statsByZone[z]![size] = (statsByZone[z]![size] ?? 0) + 1;
     }
-    return ListView(padding: const EdgeInsets.all(24), children: [const Text("RÉPARTITION PAR TAILLE", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)), const SizedBox(height: 20), ...['S', 'M', 'L', 'XL', 'XXL'].map((size) => Column(children: [Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Row(children: [CircleAvatar(backgroundColor: Colors.black, radius: 18, child: Text(size, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))), const SizedBox(width: 16), const Text("Maillots"), const Spacer(), Text("${stats[size] ?? 0}", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900))])), const Divider()]))]);
+    
+    final sortedZones = statsByZone.keys.toList()..sort();
+    
+    if (sortedZones.isEmpty) {
+      return const Center(child: Text("AUCUNE TAILLE ENREGISTRÉE", style: TextStyle(fontWeight: FontWeight.bold)));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: sortedZones.length,
+      itemBuilder: (context, index) {
+        final z = sortedZones[index];
+        final sizes = statsByZone[z]!;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade100)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("ZONE $z", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: sizes.entries.map((e) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("${e.key} :", style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.bold, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Text("${e.value}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildStatsByZone(List<QueryDocumentSnapshot> orders, Color? cardBg) {
