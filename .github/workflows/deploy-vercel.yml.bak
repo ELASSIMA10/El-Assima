@@ -38,23 +38,14 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release --web-renderer=canvaskit
 
-      - name: Verify Build
-        run: |
-          echo "Build size:"
-          du -sh build/web
-          ls build/web
-
-      - name: Prepare vercel.json
+      - name: Copy Vercel Config
         run: cp vercel.json build/web/
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
       - name: Deploy to Vercel
-        working-directory: build/web
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          vercel --prod --yes --token "$VERCEL_TOKEN"
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: build/web
