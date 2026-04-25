@@ -1437,6 +1437,30 @@
       margin-top: 0.3rem;
     }
 
+    /* GLOBAL ZONE SELECTOR IN BOUTIQUE */
+    .global-zone-selector {
+      background: var(--card);
+      border: 1px solid rgba(211,47,47,0.3);
+      border-radius: 14px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .global-zone-label { font-size: 0.75rem; font-weight: 700; color: white; letter-spacing: 1px; }
+    .global-zone-select {
+      flex: 1;
+      background: #000;
+      color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-weight: 800;
+      outline: none;
+    }
+
     /* Responsive */
     @media (min-width: 600px) {
       .page {
@@ -1587,6 +1611,28 @@
         <div class="page-header">
           <h2>🛍️ BOUTIQUE</h2>
           <p>Maillots, porte-clés et produits officiels</p>
+        </div>
+
+        <!-- SÉLECTEUR DE ZONE GLOBAL -->
+        <div class="global-zone-selector">
+          <div class="global-zone-label">📍 ZONE DE VENTE :</div>
+          <select id="global-boutique-zone" class="global-zone-select" onchange="updateGlobalZone()">
+            <option value="">-- Choisir la Zone --</option>
+            <option value="1">Zone 1</option>
+            <option value="2">Zone 2</option>
+            <option value="3">Zone 3</option>
+            <option value="4">Zone 4</option>
+            <option value="5">Zone 5</option>
+            <option value="6">Zone 6</option>
+            <option value="7">Zone 7</option>
+            <option value="8">Zone 8</option>
+            <option value="9">Zone 9</option>
+            <option value="10">Zone 10</option>
+            <option value="11">Zone 11</option>
+            <option value="12">Zone 12</option>
+            <option value="13">Zone 13</option>
+            <option value="14">Zone 14</option>
+          </select>
         </div>
 
         <div class="cart-indicator" id="cart-indicator" style="display:none">
@@ -1798,6 +1844,14 @@
     let selectedProduct = null;
     let selectedSize = null;
     let html5QrCode = null;
+    let globalBoutiqueZone = "";
+
+    function updateGlobalZone() {
+      globalBoutiqueZone = document.getElementById('global-boutique-zone').value;
+      if (globalBoutiqueZone) {
+        showToast(`📍 Zone ${globalBoutiqueZone} sélectionnée pour la vente`, 'success');
+      }
+    }
 
     // Synchronisation en temps réel avec Firebase (MEMBRES)
     db.collection("members").onSnapshot((snapshot) => {
@@ -2106,7 +2160,16 @@
       // Reset form
       document.getElementById('order-firstname').value = '';
       document.getElementById('order-lastname').value = '';
-      document.getElementById('order-zone').value = '';
+      
+      // Utiliser la zone globale si définie
+      const zoneSelect = document.getElementById('order-zone');
+      zoneSelect.value = globalBoutiqueZone;
+      
+      if (globalBoutiqueZone) {
+        zoneSelect.style.borderColor = 'var(--success)';
+      } else {
+        zoneSelect.style.borderColor = 'var(--border)';
+      }
 
       const isJersey = selectedProduct.type === 'jersey';
       document.getElementById('modal-size-selector').style.display = isJersey ? 'grid' : 'none';
