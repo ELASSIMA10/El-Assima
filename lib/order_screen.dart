@@ -228,10 +228,10 @@ class _OrderScreenState extends State<OrderScreen> {
                   children: [
                     Expanded(
                       child: TextField(
-                        controller: _firstNameController,
+                        controller: _lastNameController,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
-                          labelText: "Prénom",
+                          labelText: "Nom",
                           prefixIcon: const Icon(Icons.person_outline),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                           filled: true,
@@ -242,10 +242,10 @@ class _OrderScreenState extends State<OrderScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
-                        controller: _lastNameController,
+                        controller: _firstNameController,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
-                          labelText: "Nom",
+                          labelText: "Prénom",
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                           filled: true,
                           fillColor: Colors.white,
@@ -260,7 +260,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedZone,
                   decoration: InputDecoration(
-                    labelText: "Zone / Tribune",
+                    labelText: "Zone",
                     prefixIcon: const Icon(Icons.stadium_outlined),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                     filled: true,
