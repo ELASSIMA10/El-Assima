@@ -1,4 +1,4 @@
-const CACHE_NAME = 'el-assima-pwa-v1';
+const CACHE_NAME = 'el-assima-pwa-v2';
 const urlsToCache = [
   '/',
   '/ELASSIMA_HUB.html',

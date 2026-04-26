@@ -1906,7 +1906,7 @@
         const data = doc.data();
         MEMBERS.push({
           id: doc.id,
-          name: data.name || "Inconnu",
+          name: data.name || data.Name || data.nom || "Inconnu",
           zone: data.zone || 0,
           is_present: data.is_present || false
         });
@@ -2308,12 +2308,12 @@
       list.innerHTML = dbOrders.map((item, i) => `
         <div class="order-card">
           <div class="order-header">
-            <div class="order-name">${item.client || "Client Inconnu"}</div>
+            <div class="order-name">${item.client || item.name || item.fullName || "Client Inconnu"}</div>
             <div class="order-total">${((item.price || 0) * (item.quantity || 0)).toLocaleString()} DA</div>
           </div>
           <div class="order-items">
-            ${item.product} ${item.size !== 'N/A' ? ' (Taille: ' + item.size + ')' : ''} 
-            <br>Qté: ${item.quantity} • Zone: ${item.zone || '-'}
+            ${item.product || "Produit"} ${item.size && item.size !== 'N/A' ? ' (Taille: ' + item.size + ')' : ''} 
+            <br>Qté: ${item.quantity || 1} • Zone: ${item.zone || '-'}
             <br><span style="font-size:0.6rem; opacity:0.6">${item.timestamp ? new Date(item.timestamp.seconds * 1000).toLocaleString() : ''}</span>
           </div>
         </div>
