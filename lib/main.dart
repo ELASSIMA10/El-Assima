@@ -123,8 +123,14 @@ class _MainScreenState extends State<MainScreen> {
         const NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history, color: Colors.red), label: 'Historique'),
       ]);
     } else {
-      pages.add(const OrderScreen());
-      destinations.add(const NavigationDestination(icon: Icon(Icons.shopping_bag_outlined), selectedIcon: Icon(Icons.shopping_bag, color: Colors.red), label: 'BOUTIQUE'));
+      pages.addAll([
+        const OrderScreen(),
+        const AdminOrdersScreen(isAdmin: false),
+      ]);
+      destinations.addAll([
+        const NavigationDestination(icon: Icon(Icons.shopping_bag_outlined), selectedIcon: Icon(Icons.shopping_bag, color: Colors.red), label: 'BOUTIQUE'),
+        const NavigationDestination(icon: Icon(Icons.shopping_cart_checkout_outlined), selectedIcon: Icon(Icons.shopping_cart_checkout, color: Colors.red), label: 'COMMANDE'),
+      ]);
     }
 
     return Scaffold(
